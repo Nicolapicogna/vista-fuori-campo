@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0e0d0b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vista fuori campo">
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;Vista fuori campo&quot;,&quot;short_name&quot;:&quot;VFC&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230e0d0b&quot;,&quot;theme_color&quot;:&quot;%230e0d0b&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230e0d0b'/%3E%3Ctext x='256' y='320' font-size='280' text-anchor='middle' fill='%23b8a272' font-family='serif' font-style='italic'%3EV%3C/text%3E%3C/svg%3E&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]}">
+<title>Vista fuori campo</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e0d0b;
+  --surface: #161412;
+  --surface2: #1e1c18;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #eae6df;
+  --text2: #7a756e;
+  --text3: #46423c;
+  --gold: #b8a272;
+  --gold2: #c8b282;
+  --r: 8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;min-height:100vh;max-width:420px;margin:0 auto;padding-bottom:100px;overflow-x:hidden}
+.screen{display:none;animation:fadeIn 0.2s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* TYPOGRAPHY */
+.serif{font-family:'Playfair Display',serif;font-weight:400}
+.label{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);font-weight:500}
+
+/* SVG ICONS — non sovrascrivere stroke su svg con stroke proprio */
+.icon{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* Icon contrast overrides — solo icone generiche */
+.result-back svg,
+.expand-btn svg { stroke: var(--text2) }
+.nav-item svg { stroke: var(--text2) }
+.nav-item.active svg { stroke: var(--gold) }
+.like-btn svg { stroke: var(--text2) }
+.like-btn.liked svg { stroke: #c06070; fill: #c06070 }
+.like-btn.disliked svg { stroke: var(--text3) }
+
+
+/* INPUTS */
+.input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border2);padding:11px 0;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s}
+.input:focus{border-bottom-color:var(--gold)}
+.input::placeholder{color:var(--text3)}
+textarea.input{resize:none;line-height:1.65;padding-top:10px}
+
+/* BUTTONS */
+.btn{width:100%;padding:14px;border:1px solid var(--gold);border-radius:var(--r);background:transparent;color:var(--gold);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.04em;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{background:rgba(184,162,114,0.07)}
+.btn.filled{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+.btn.filled:active{background:var(--gold2)}
+.btn.filled:disabled{opacity:0.4;pointer-events:none}
+.btn.ghost{border:none;color:var(--text3);font-size:12px;padding:10px}
+
+/* SWITCH */
+.switch{width:36px;height:20px;border-radius:10px;background:var(--surface2);border:1px solid var(--border2);position:relative;transition:all 0.2s;flex-shrink:0;cursor:pointer}
+.switch.on{background:var(--gold);border-color:var(--gold)}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:var(--text3);transition:all 0.2s}
+.switch.on::after{left:19px;background:var(--bg)}
+
+/* ── LOGIN ── */
+#s-login{padding:72px 28px 0;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
+.login-series{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+.login-title{font-family:'Playfair Display',serif;font-size:48px;font-weight:400;line-height:1.05;color:var(--text);margin-bottom:4px}
+.login-title em{font-style:italic;color:var(--gold)}
+.login-sub{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);margin-bottom:52px}
+.login-fields{display:flex;flex-direction:column}
+.login-field{border-bottom:1px solid var(--border);padding:14px 0}
+.login-field:first-child{border-top:1px solid var(--border)}
+.lf-label{font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.lf-row{display:flex;align-items:center;gap:10px}
+.lf-row input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px}
+.lf-row input::placeholder{color:var(--text3)}
+.lf-icon{color:var(--text3)}
+.login-actions{margin-top:28px;display:flex;flex-direction:column;gap:10px}
+.login-note{font-size:10px;color:var(--text3);text-align:center;margin-top:18px;line-height:1.8}
+
+/* ── PAGE HEAD ── */
+.page-head{padding:52px 28px 0}
+.page-head-row{display:flex;align-items:flex-start;justify-content:space-between}
+.page-kicker{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:5px}
+.page-title{font-family:'Playfair Display',serif;font-size:30px;font-weight:400;line-height:1.1}
+.page-title em{font-style:italic}
+.page-num-block{text-align:right;padding-top:3px}
+.page-num{font-family:'Playfair Display',serif;font-size:36px;font-weight:400;color:var(--text3);line-height:1}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:0 28px}
+
+/* SECTION */
+.section{padding:22px 28px 0}
+.sec-label{display:flex;align-items:center;gap:7px;margin-bottom:14px}
+.sec-label svg { color: var(--text2) !important }
+.sec-note{font-size:10px;color:var(--text3);font-weight:400;letter-spacing:0;margin-left:auto}
+
+/* TOGGLE LIST */
+.toggle-list{display:flex;flex-direction:column}
+.titem{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.titem:first-child{border-top:1px solid var(--border)}
+.titem:active{opacity:0.6}
+.titem-icon{color:var(--text2);flex-shrink:0}
+.titem-body{flex:1}
+.titem-title{font-size:14px;color:var(--text)}
+.titem-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.titem-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.titem-val{font-size:12px;color:var(--text2)}
+
+/* CTX CHIPS */
+.ctx-wrap{padding:12px 0 4px;display:flex;flex-direction:column;gap:10px}
+.ctx-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ctx-row-label{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);width:100%}
+.chip{padding:6px 12px;border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--text3);cursor:pointer;transition:all 0.2s;background:transparent;font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:5px}
+.chip svg{flex-shrink:0}
+.chip.active{border-color:var(--gold);color:var(--text);background:rgba(184,162,114,0.1)}
+
+/* Colori icone meteo — sempre visibili */
+#c-sole svg { stroke: #d4a843 }
+#c-parz svg { stroke: #a8b8c8 }
+#c-cop svg  { stroke: #8898a8 }
+#c-not svg  { stroke: #8890b8 }
+
+/* Colori icone stagioni — sempre visibili */
+#c-prim svg { stroke: #7ab87a }
+#c-est svg  { stroke: #d4a843 }
+#c-aut svg  { stroke: #c47840 }
+#c-inv svg  { stroke: #98b4c8 }
+
+/* Colori diretti sulle icone nel DOM */
+.icon-train { color: #7a9eb8 }
+.icon-car   { color: #c49060 }
+
+/* Cuore like */
+.like-btn svg { stroke: var(--text2) }
+.like-btn.liked { border-color: #c06070 }
+.like-btn.liked svg { stroke: #c06070; fill: #c06070 }
+.like-btn.disliked { border-color: var(--text3) }
+.like-btn.disliked svg { stroke: var(--text3) }
+
+/* DIRECTION */
+.dir-wrap{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-top:0}
+.dir-btn{padding:16px 14px;background:var(--bg);cursor:pointer;text-align:left;border:none;width:100%;transition:background 0.15s}
+.dir-btn.active{background:var(--surface)}
+.dir-code{font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);margin-top:5px;display:block}
+.dir-btn.active .dir-code{color:var(--gold)}
+.dir-name{font-family:'Playfair Display',serif;font-size:17px;color:var(--text2)}
+.dir-btn.active .dir-name{color:var(--text)}
+.dir-prog{font-size:10px;color:var(--text3);margin-top:4px;line-height:1.5}
+
+/* PAESAGGIO */
+.paes-strip{display:flex;align-items:center;padding:14px 28px 0;overflow-x:auto;scrollbar-width:none;gap:0}
+.paes-strip::-webkit-scrollbar{display:none}
+.paes-item{display:flex;align-items:center;gap:0;flex-shrink:0}
+.paes-word{font-size:11px;color:var(--text2)}
+.paes-arr{display:flex;align-items:center;padding:0 8px;color:var(--text3)}
+
+/* ARTISTI */
+.artisti-list{display:flex;flex-direction:column}
+.art-item{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding:10px 0}
+.art-item:first-child{border-top:1px solid var(--border)}
+.art-n{font-size:11px;color:var(--text3);width:14px;text-align:right;flex-shrink:0}
+.art-input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px}
+.art-input::placeholder{color:var(--text3)}
+.art-del{background:transparent;border:none;color:var(--text2);cursor:pointer;padding:0;flex-shrink:0;display:flex;align-items:center;transition:color 0.15s}
+.art-del:active{color:var(--text)}
+.add-row{display:flex;align-items:center;gap:8px;padding:12px 0;cursor:pointer;color:var(--text3);font-size:13px;background:transparent;border:none;width:100%;font-family:'DM Sans',sans-serif;transition:color 0.15s}
+.add-row:active{color:var(--text2)}
+
+/* TRACCE */
+.traccia-item{border-bottom:1px solid var(--border);padding:12px 0}
+.traccia-item:first-child{border-top:1px solid var(--border)}
+.traccia-hrow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.traccia-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);flex:1}
+.traccia-del{background:transparent;border:none;color:var(--text2);cursor:pointer;display:flex;align-items:center;padding:0}
+.traccia-inputs{padding-left:24px;display:flex;flex-direction:column;gap:6px}
+.traccia-in{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:6px 0;transition:border-color 0.2s}
+.traccia-in::placeholder{color:var(--text3)}
+.traccia-in:focus{border-bottom-color:var(--gold)}
+
+/* GENERATE */
+.gen-wrap{padding:28px 28px 0}
+.spinner{width:14px;height:14px;border:1.5px solid rgba(184,162,114,0.3);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading .spinner{display:block}
+.loading{opacity:0.6;pointer-events:none}
+
+/* ── RESULT ── */
+#s-result{padding:48px 28px 0}
+.result-back{background:none;border:none;color:var(--text2);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0;margin-bottom:28px;display:flex;align-items:center;gap:6px}
+.result-kicker{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.result-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:400;line-height:1.35;color:var(--text);margin-bottom:10px}
+.result-sub{font-family:'Playfair Display',serif;font-size:13px;font-style:italic;color:var(--text2);border-left:1px solid var(--gold);padding-left:12px;margin-bottom:12px;line-height:1.7}
+.result-desc{font-size:12px;color:var(--text2);line-height:1.8}
+
+/* TRACKLIST */
+.tracklist{margin-top:24px}
+.track{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
+.track.bonus{border-bottom:none;padding-top:20px;position:relative}
+.track.bonus::before{content:'bonus';position:absolute;top:8px;left:36px;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3)}
+.track-num{font-size:11px;color:var(--text3);width:22px;flex-shrink:0;text-align:right;padding-top:3px}
+.track-body{flex:1;min-width:0}
+.track-row1{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+.track-name{font-family:'Playfair Display',serif;font-size:18px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-dur{font-size:11px;color:var(--text3);flex-shrink:0}
+.track-artist{font-size:12px;color:var(--text2)}
+.track-album{font-size:11px;color:var(--text3)}
+.track-tags{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
+.track-tag{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);border:1px solid var(--border2);border-radius:3px;padding:2px 6px}
+.track-tag.pinned{border-color:var(--text3)}
+.track-note{font-family:'Playfair Display',serif;font-size:12px;font-style:italic;color:var(--text3);margin-top:5px;line-height:1.6}
+.track-status{font-size:10px;margin-top:5px;display:flex;align-items:center;gap:6px;color:var(--text3)}
+.sdot{width:5px;height:5px;border-radius:50%;flex-shrink:0;background:var(--text3)}
+.s-ok{background:#6a9e7a}.s-no{background:#c06060}
+.s-wait{background:var(--gold);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* DUR */
+.dur-block{margin:20px 0;padding:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.dur-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.dur-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3)}
+.dur-val{font-family:'Playfair Display',serif;font-size:16px;color:var(--text)}
+.dur-bar-bg{height:2px;background:var(--surface2);border-radius:1px}
+.dur-bar{height:2px;background:var(--gold);border-radius:1px;transition:width 1s ease;width:0}
+.dur-bar.over{background:#c06060}
+.result-actions{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+
+/* ── SERIE ── */
+#s-serie{padding:50px 28px 0}
+.serie-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:400;line-height:1.1;margin:6px 0 16px}
+.serie-title em{font-style:italic}
+.stats-row{display:flex;gap:24px;margin-bottom:0}
+.stat .n{font-family:'Playfair Display',serif;font-size:28px;color:var(--text2);line-height:1}
+.stat .l{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-top:2px}
+.serie-div{height:1px;background:var(--border);margin-top:18px}
+
+.ril{padding:16px 0;border-bottom:1px solid var(--border)}
+.ril-top{display:flex;gap:14px;align-items:flex-start}
+.ril-num{font-family:'Playfair Display',serif;font-size:28px;color:var(--text3);width:32px;flex-shrink:0;line-height:1;padding-top:2px}
+.ril-info{flex:1;min-width:0}
+.ril-title{font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.ril-sub{font-family:'Playfair Display',serif;font-size:12px;font-style:italic;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+.ril-meta{font-size:10px;color:var(--text3);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ril-tag{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--border2);border-radius:3px;color:var(--text3)}
+.ril-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.like-btn{background:transparent;border:1px solid var(--border2);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:all 0.15s;flex-shrink:0}
+.like-btn.liked{border-color:#6a9e7a;color:#6a9e7a}
+.like-btn.disliked{border-color:#c06060;color:#c06060}
+.expand-btn{background:transparent;border:none;color:var(--text2);cursor:pointer;padding:4px;transition:transform 0.2s;display:flex;align-items:center}
+.expand-btn.open{transform:rotate(180deg)}
+
+.ril-tracks{display:none;padding:12px 0 4px 46px}
+.ril-tracks.open{display:block}
+.rt{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.rt:last-child{border-bottom:none}
+.rt-n{font-size:11px;color:var(--text3);width:18px;text-align:right;flex-shrink:0;padding-top:2px}
+.rt-info{flex:1;min-width:0}
+.rt-name{font-family:'Playfair Display',serif;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt-artist{font-size:11px;color:var(--text3);margin-top:1px}
+.rt-tag{font-size:9px;color:var(--text3);border:1px solid var(--border);border-radius:3px;padding:1px 5px;margin-top:3px;display:inline-block;letter-spacing:0.08em}
+.rt-dur{font-size:11px;color:var(--text3);flex-shrink:0;padding-top:2px}
+
+.note-area{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);padding:8px 0;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;resize:none;line-height:1.6;margin-top:10px}
+.note-area::placeholder{color:var(--text3)}
+.note-save{background:transparent;border:none;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:10px;cursor:pointer;letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;padding:0}
+.export-link{background:transparent;border:none;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;margin-top:8px;padding:0;display:flex;align-items:center;gap:5px}
+
+.empty{text-align:center;padding:60px 0;color:var(--text3);font-size:13px;line-height:2.2}
+
+/* NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:rgba(14,13,11,0.96);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:10px 0 26px;z-index:100}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;color:var(--text2);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;padding:4px 0;font-weight:500;transition:color 0.15s}
+.nav-item.active{color:var(--gold)}
+
+/* TOAST */
+.toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:9px 18px;font-size:11px;color:var(--text);opacity:0;transition:all 0.25s;pointer-events:none;white-space:nowrap;z-index:500;letter-spacing:0.04em}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* SHEET */
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(3px);z-index:200;display:none;align-items:flex-end}
+.sheet.open{display:flex}
+.sheet-inner{background:var(--surface);border-top:1px solid var(--border2);width:100%;max-width:420px;margin:0 auto;padding:24px 28px 40px;animation:up 0.25s cubic-bezier(0.32,0.72,0,1)}
+@keyframes up{from{transform:translateY(100%)}to{transform:none}}
+.sheet-handle{width:32px;height:3px;background:var(--border2);border-radius:2px;margin:0 auto 22px}
+.export-txt{background:var(--bg);padding:16px;font-size:11px;color:var(--text2);line-height:1.9;white-space:pre-wrap;word-break:break-word;max-height:260px;overflow-y:auto;margin-bottom:16px;border:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<!-- SVG DEFS -->
+<svg style="display:none">
+  <symbol id="i-mail" viewBox="0 0 24 24" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 4 10 9 10-9"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" stroke-width="1.5"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15 8l2 2"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24" stroke-width="1.5"><path d="M18 10a6 6 0 0 0-11.74-1.5A4.5 4.5 0 1 0 6 18h12a4 4 0 0 0 0-8Z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></symbol>
+  <symbol id="i-train" viewBox="0 0 24 24" stroke-width="1.5"><rect x="4" y="3" width="16" height="14" rx="4"/><path d="M4 11h16M8 19l-2 2M16 19l2 2M8 3v8M16 3v8"/><circle cx="8.5" cy="15.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24" stroke-width="1.5"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2l2-3h8l2 3h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24" stroke-width="1.5"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" stroke-width="1.5"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24" stroke-width="1.5"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24" stroke-width="1.5"><path d="m12 19-7-7 7-7M5 12h14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-thumb-up" viewBox="0 0 24 24" stroke-width="1.5"><path d="M7 10v12M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/></symbol>
+  <symbol id="i-thumb-down" viewBox="0 0 24 24" stroke-width="1.5"><path d="M17 14V2M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z"/></symbol>
+  <symbol id="i-export" viewBox="0 0 24 24" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24" stroke-width="1.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="i-generate" viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></symbol>
+  <symbol id="i-padlock" viewBox="0 0 24 24" stroke-width="1.5"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-neutral" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></symbol>
+  <symbol id="i-sole" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></symbol>
+  <symbol id="i-parz" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="9" cy="9" r="3"/><path d="M9 2v1M3.22 3.22l.7.7M2 9h1M3.22 14.78l.7-.7"/><path d="M17 14a5 5 0 0 0-9.9-1H6a4 4 0 0 0 0 8h11a3 3 0 0 0 0-6h-1"/></symbol>
+  <symbol id="i-cop" viewBox="0 0 24 24" stroke-width="1.5"><path d="M18 10a6 6 0 0 0-11.74-1.5A4.5 4.5 0 1 0 6 18h12a4 4 0 0 0 0-8Z"/><path d="M8 21v1M12 21v1M16 21v1" stroke-linecap="round"/></symbol>
+  <symbol id="i-not" viewBox="0 0 24 24" stroke-width="1.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+  <symbol id="i-prim" viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 22V12"/><path d="M12 12C10 8 6 7 4 9c2 0 4 1 8 3z"/><path d="M12 12c2-4 6-5 8-3-2 0-4 1-8 3z"/><path d="M12 12c-3-2-3-6-1-8 0 2 1 4 1 8z"/><path d="M12 12c3-2 3-6 1-8 0 2-1 4-1 8z"/></symbol>
+  <symbol id="i-est" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+  <symbol id="i-aut" viewBox="0 0 24 24" stroke-width="1.5"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></symbol>
+  <symbol id="i-inv" viewBox="0 0 24 24" stroke-width="1.5"><path d="M2 12h20M12 2v20M5.64 5.64l12.72 12.72M18.36 5.64 5.64 18.36"/></symbol>
+</svg>
+
+<!-- LOGIN -->
+<div id="s-login" class="screen active">
+  <div class="login-series">Generatore di serie</div>
+  <div class="login-title">Vista<br><em>fuori campo</em></div>
+  <div class="login-sub">Rilievi sonori del paesaggio</div>
+  <div class="login-fields">
+    <div class="login-field">
+      <div class="lf-label">Qobuz — Email</div>
+      <div class="lf-row">
+        <svg class="lf-icon" width="14" height="14"><use href="#i-mail"/></svg>
+        <input type="email" id="lEmail" placeholder="tua@email.com">
+      </div>
+    </div>
+    <div class="login-field">
+      <div class="lf-label">Password</div>
+      <div class="lf-row">
+        <svg class="lf-icon" width="14" height="14"><use href="#i-lock"/></svg>
+        <input type="password" id="lPwd" placeholder="••••••••">
+      </div>
+    </div>
+    <div class="login-field">
+      <div class="lf-label">App ID</div>
+      <div class="lf-row">
+        <svg class="lf-icon" width="14" height="14"><use href="#i-key"/></svg>
+        <input type="text" id="lAppId" placeholder="app_id Qobuz">
+      </div>
+    </div>
+    <div class="login-field">
+      <div class="lf-label">Chiave API Anthropic</div>
+      <div class="lf-row">
+        <svg class="lf-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <input type="password" id="lAnthropicKey" placeholder="sk-ant-...">
+      </div>
+    </div>
+  </div>
+  <div class="login-actions">
+    <button class="btn filled" onclick="doLogin()">Entra</button>
+  </div>
+  <p class="login-note">Credenziali salvate localmente sul dispositivo.</p>
+</div>
+
+<!-- GENERA -->
+<div id="s-main" class="screen">
+  <div class="page-head">
+    <div class="page-head-row">
+      <div>
+        <div class="page-kicker">Vista fuori campo</div>
+        <div class="page-title">Rilievo <em id="nextNumTitle">01</em></div>
+      </div>
+      <div class="page-num-block">
+        <div class="label" style="margin-bottom:3px">Prossimo</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="page-num" id="nextNum">01</div>
+          <button onclick="overrideNum()" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:0.1em;text-transform:uppercase;padding:0">modifica</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- METEO -->
+  <div class="section">
+    <div class="toggle-list">
+      <div class="titem" onclick="toggleWeather()">
+        <div class="titem-icon">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 10a6 6 0 0 0-11.74-1.5A4.5 4.5 0 1 0 6 18h12a4 4 0 0 0 0-8Z"/></svg>
+        </div>
+        <div class="titem-body">
+          <div class="titem-title">Meteo automatico</div>
+          <div class="titem-sub" id="wMeta">Prealpi Giulie · da data e ora</div>
+        </div>
+        <div class="titem-right">
+          <span class="titem-val" id="wVal">—</span>
+          <div class="switch" id="weatherSwitch"></div>
+        </div>
+      </div>
+    </div>
+    <div class="ctx-wrap">
+      <div class="ctx-row">
+        <span class="ctx-row-label">Luce</span>
+        <button class="chip" id="c-sole" onclick="setLuce('sole','Sole pieno')"><svg width="13" height="13" fill="none" stroke="#d4a843" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg> Sole</button>
+        <button class="chip" id="c-parz" onclick="setLuce('parz','Parziale')"><svg width="13" height="13" fill="none" stroke="#a8b8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M9 2v1M3.22 3.22l.7.7M2 9h1M3.22 14.78l.7-.7"/><path d="M17 14a5 5 0 0 0-9.9-1H6a4 4 0 0 0 0 8h11a3 3 0 0 0 0-6h-1"/></svg> Parziale</button>
+        <button class="chip" id="c-cop" onclick="setLuce('cop','Coperto')"><svg width="13" height="13" fill="none" stroke="#8898a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 10a6 6 0 0 0-11.74-1.5A4.5 4.5 0 1 0 6 18h12a4 4 0 0 0 0-8Z"/><path d="M8 21v1M12 21v1M16 21v1"/></svg> Coperto</button>
+        <button class="chip" id="c-not" onclick="setLuce('not','Notturno')"><svg width="13" height="13" fill="none" stroke="#8890b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Notturno</button>
+      </div>
+      <div class="ctx-row">
+        <span class="ctx-row-label">Stagione</span>
+        <button class="chip" id="c-prim" onclick="setStagione('primavera')"><svg width="13" height="13" fill="none" stroke="#7ab87a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 22V12"/><path d="M12 12C10 8 6 7 4 9c2 0 4 1 8 3z"/><path d="M12 12c2-4 6-5 8-3-2 0-4 1-8 3z"/><path d="M12 12c-3-2-3-6-1-8 0 2 1 4 1 8z"/><path d="M12 12c3-2 3-6 1-8 0 2-1 4-1 8z"/></svg> Primavera</button>
+        <button class="chip" id="c-est" onclick="setStagione('estate')"><svg width="13" height="13" fill="none" stroke="#d4a843" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg> Estate</button>
+        <button class="chip" id="c-aut" onclick="setStagione('autunno')"><svg width="13" height="13" fill="none" stroke="#c47840" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg> Autunno</button>
+        <button class="chip" id="c-inv" onclick="setStagione('inverno')"><svg width="13" height="13" fill="none" stroke="#98b4c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M2 12h20M12 2v20M5.64 5.64l12.72 12.72M18.36 5.64 5.64 18.36"/></svg> Inverno</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider" style="margin-top:20px"></div>
+
+  <!-- DIREZIONE -->
+  <div class="section">
+    <div class="sec-label">
+      <svg width="14" height="14" fill="none" stroke="#b8a272" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span class="sec-label-text">Direzione</span>
+    </div>
+    <div class="dir-wrap">
+      <button class="dir-btn active" id="btnT" onclick="setDir('tratto')">
+        <div class="dir-name">Andata</div>
+        <span class="dir-code">[tratto]</span>
+      </button>
+      <button class="dir-btn" id="btnR" onclick="setDir('riflesso')">
+        <div class="dir-name">Ritorno</div>
+        <span class="dir-code">[riflesso]</span>
+      </button>
+    </div>
+    <div class="paes-strip" id="paesStrip"></div>
+  </div>
+
+  <div class="divider" style="margin-top:20px"></div>
+
+  <!-- MEZZO -->
+  <div class="section">
+    <div class="sec-label">
+      <span class="sec-label-text">Mezzo</span>
+    </div>
+    <div class="toggle-list">
+      <div class="titem" onclick="setMezzo('treno')">
+        <div class="titem-icon"><svg width="16" height="16" fill="none" stroke="#7a9eb8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="14" rx="4"/><path d="M4 11h16M8 19l-2 2M16 19l2 2M8 3v8M16 3v8"/><circle cx="8.5" cy="15.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/></svg></div>
+        <div class="titem-body">
+          <div class="titem-title">Treno</div>
+          <div class="titem-sub">18–24 min</div>
+        </div>
+        <div class="switch" id="swTreno" style="pointer-events:none"></div>
+      </div>
+      <div class="titem" onclick="setMezzo('auto')">
+        <div class="titem-icon"><svg width="16" height="16" fill="none" stroke="#c49060" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2l2-3h8l2 3h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></svg></div>
+        <div class="titem-body">
+          <div class="titem-title">Auto</div>
+          <div class="titem-sub">~35 min</div>
+        </div>
+        <div class="switch" id="swAuto" style="pointer-events:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider" style="margin-top:20px"></div>
+
+  <!-- ENERGIA -->
+  <div class="section">
+    <div class="sec-label">
+      <svg width="14" height="14" fill="none" stroke="#c8a060" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <span class="sec-label-text">Energia del giorno</span>
+    </div>
+    <div class="toggle-list">
+      <div class="titem" onclick="setEnergia('bassa')">
+        <div class="titem-body"><div class="titem-title">Bassa</div></div>
+        <div class="switch" id="en-bassa" style="pointer-events:none"></div>
+      </div>
+      <div class="titem" onclick="setEnergia('media')">
+        <div class="titem-body"><div class="titem-title">Media</div></div>
+        <div class="switch" id="en-media" style="pointer-events:none"></div>
+      </div>
+      <div class="titem" onclick="setEnergia('alta')">
+        <div class="titem-body"><div class="titem-title">Alta</div></div>
+        <div class="switch" id="en-alta" style="pointer-events:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider" style="margin-top:20px"></div>
+
+  <!-- NOTE -->
+  <div class="section">
+    <div class="sec-label">
+      <span class="sec-label-text">Variazioni di oggi</span>
+      <span class="sec-note">opzionale</span>
+    </div>
+    <textarea class="input" id="varDesc" rows="2" placeholder="Luce particolare, umore, dettagli del paesaggio…"></textarea>
+  </div>
+
+  <div class="divider" style="margin-top:20px"></div>
+
+  <!-- INTORNI -->
+  <div class="section">
+    <div class="sec-label">
+      <svg width="14" height="14" fill="none" stroke="#9e7ab8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <span class="sec-label-text">Intorni musicali</span>
+      <span class="sec-note">3–5</span>
+    </div>
+    <div class="artisti-list" id="artistiList"></div>
+    <button class="add-row" id="addArtBtn" onclick="addArtista()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      aggiungi intorno
+    </button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- TRACCE -->
+  <div class="section">
+    <div class="sec-label">
+      <svg width="14" height="14" fill="none" stroke="#a89070" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1" fill="#a89070" stroke="none"/></svg>
+      <span class="sec-label-text">Tracce vincolate</span>
+      <span class="sec-note">opz. max 3</span>
+    </div>
+    <div id="tracceList"></div>
+    <button class="add-row" id="addTracBtn" onclick="addTraccia()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      vincola traccia
+    </button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- BONUS -->
+  <div class="section">
+    <div class="toggle-list">
+      <div class="titem" onclick="toggleBonus()">
+        <div class="titem-icon"><svg width="16" height="16" fill="none" stroke="#9e7ab8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+        <div class="titem-body">
+          <div class="titem-title">Bonus track</div>
+          <div class="titem-sub" id="bonusSub">—</div>
+        </div>
+        <div class="switch" id="bonusSwitch"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gen-wrap">
+    <button class="btn" id="genBtn" onclick="generatePlaylist()">
+      <div class="spinner" id="genSpinner"></div>
+      <svg width="15" height="15" id="genIcon"><use href="#i-generate"/></svg>
+      <span id="genTxt">Genera rilievo</span>
+    </button>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="s-result" class="screen">
+  <div style="padding:48px 28px 0">
+    <button class="result-back" onclick="showScreen('s-main')">
+      <svg width="14" height="14"><use href="#i-arrow-left"/></svg>
+      torna agli input
+    </button>
+    <div class="result-kicker" id="rKicker"></div>
+    <div class="result-title" id="rTitle">—</div>
+    <div class="result-sub" id="rSub"></div>
+    <div class="result-desc" id="rDesc"></div>
+    <div class="tracklist" id="tracklist"></div>
+    <div class="dur-block">
+      <div class="dur-row">
+        <span class="dur-label">Durata</span>
+        <span class="dur-val" id="durTot">—</span>
+      </div>
+      <div class="dur-row" style="margin-bottom:8px">
+        <span class="dur-label">Target</span>
+        <span style="font-size:12px;color:var(--text3)" id="durTarget">—</span>
+      </div>
+      <div class="dur-bar-bg"><div class="dur-bar" id="durBar"></div></div>
+    </div>
+    <div class="result-actions">
+      <button class="btn filled" id="saveBtn" onclick="saveToQobuz()">
+        <svg width="14" height="14"><use href="#i-check"/></svg>
+        Salva su Qobuz
+      </button>
+      <button class="btn" onclick="generatePlaylist()">
+        <svg width="14" height="14"><use href="#i-generate"/></svg>
+        Rigenera
+      </button>
+      <button class="btn ghost" onclick="showScreen('s-main')">← modifica input</button>
+    </div>
+  </div>
+</div>
+
+<!-- SERIE -->
+<div id="s-serie" class="screen">
+  <div style="padding:50px 28px 0">
+    <div class="label">Archivio</div>
+    <div class="serie-title">Vista <em>fuori campo</em></div>
+    <div class="stats-row">
+      <div class="stat"><div class="n" id="stTot">0</div><div class="l">Rilievi</div></div>
+      <div class="stat"><div class="n" id="stT">0</div><div class="l">[tratto]</div></div>
+      <div class="stat"><div class="n" id="stR">0</div><div class="l">[riflesso]</div></div>
+      <div class="stat"><div class="n" id="stL">0</div><div class="l">Apprezzati</div></div>
+    </div>
+    <div class="serie-div"></div>
+    <div id="serieList"><div class="empty">Nessun rilievo ancora.<br>Genera il primo.</div></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="bottom-nav" id="bottomNav" style="display:none">
+  <div class="nav-item active" id="nav-g" onclick="navTo('s-main','nav-g')">
+    <svg width="18" height="18"><use href="#i-generate"/></svg>
+    Genera
+  </div>
+  <div class="nav-item" id="nav-s" onclick="navTo('s-serie','nav-s');renderSerie()">
+    <svg width="18" height="18"><use href="#i-menu"/></svg>
+    Serie
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="sheet" id="exportSheet" onclick="closeSheet(event)">
+  <div class="sheet-inner">
+    <div class="sheet-handle"></div>
+    <div class="label" style="margin-bottom:14px">Esporta rilievo</div>
+    <div class="export-txt" id="exportTxt"></div>
+    <button class="btn filled" onclick="copyExport()">
+      <svg width="14" height="14"><use href="#i-export"/></svg>
+      Copia testo
+    </button>
+  </div>
+</div>
+
+<script>
+const LAT=46.05,LON=13.23;
+const PAES={tratto:['Cime','Piloni','Capannoni','Città'],riflesso:['Città','Capannoni','Piloni','Bosco']};
+const DUR={treno:{l:'18–24 min',min:18,max:24},auto:{l:'~35 min',min:32,max:38}};
+const BONUS_CTX={tratto:'Strada dalla stazione al lavoro',riflesso:'Arrivo a casa ai piedi del bosco'};
+
+const S={dir:'tratto',mezzo:'treno',energia:'media',artisti:['Nirvana','CCCP Fedeli alla Linea','Nils Frahm','Leftfield'],tracce:[],bonusOn:false,luce:'parz',stagione:'primavera',weatherOn:false,nextNum:1,history:[],currentPl:null,token:null};
+
+function initCtx(){
+  const h=new Date().getHours(),m=new Date().getMonth();
+  S.stagione=m<2||m===11?'inverno':m<5?'primavera':m<8?'estate':'autunno';
+  S.luce=h<6||h>=20?'not':h<10||h>=17?'parz':'sole';
+  updateCtxUI();updateBonusSub();
+}
+function updateCtxUI(){
+  const lMap={sole:'Sole pieno',parz:'Parziale',cop:'Coperto',not:'Notturno'};
+  document.getElementById('wVal').textContent=`${lMap[S.luce]} · ${S.stagione}`;
+  document.getElementById('wMeta').textContent=S.weatherOn?'Open-Meteo · Prealpi Giulie':'Prealpi Giulie · da data e ora';
+  ['sole','parz','cop','not'].forEach(k=>document.getElementById('c-'+k).classList.toggle('active',S.luce===k));
+  [['prim','primavera'],['est','estate'],['aut','autunno'],['inv','inverno']].forEach(([k,v])=>document.getElementById('c-'+k).classList.toggle('active',S.stagione===v));
+}
+async function toggleWeather(){
+  S.weatherOn=!S.weatherOn;
+  document.getElementById('weatherSwitch').classList.toggle('on',S.weatherOn);
+  if(S.weatherOn) await fetchWeather();
+  else{initCtx();}
+}
+async function fetchWeather(){
+  document.getElementById('wVal').textContent='carico…';
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=weathercode,temperature_2m,is_day&timezone=Europe/Rome`);
+    const d=await r.json();
+    const wc=d.current.weathercode,isDay=d.current.is_day===1,temp=Math.round(d.current.temperature_2m);
+    S.luce=!isDay?'not':wc<=1?'sole':wc<=3?'parz':'cop';
+    updateCtxUI();
+    document.getElementById('wMeta').textContent=`${temp}°C · Open-Meteo · Prealpi Giulie`;
+    toast('Meteo aggiornato');
+  }catch(e){S.weatherOn=false;document.getElementById('weatherSwitch').classList.remove('on');toast('Meteo non disponibile');updateCtxUI();}
+}
+function setLuce(k){S.luce=k;updateCtxUI();}
+function setStagione(s){S.stagione=s;updateCtxUI();}
+
+async function doLogin(){
+  const email=document.getElementById('lEmail').value.trim();
+  const pwd=document.getElementById('lPwd').value;
+  const appId=document.getElementById('lAppId').value.trim();
+  const anthropicKey=document.getElementById('lAnthropicKey').value.trim();
+  if(!email||!pwd||!appId||!anthropicKey){toast('Compila tutti i campi');return}
+
+  const btn=document.querySelector('#s-login .btn');
+  btn.textContent='Accesso…';btn.disabled=true;
+
+  const pwdMd5=md5(pwd);
+
+  try{
+    const res=await fetch(`https://www.qobuz.com/api.json/0.2/user/login?email=${encodeURIComponent(email)}&password=${pwdMd5}&app_id=${appId}`);
+    const data=await res.json();
+    if(data.status==='error'||!data.user_auth_token){
+      toast(data.message||'Login fallito');
+      btn.textContent='Entra';btn.disabled=false;return;
+    }
+    S.token=data.user_auth_token;
+    S.appId=appId;
+    S.anthropicKey=anthropicKey;
+    S.userId=data.user.id;
+
+    // Salva credenziali localmente
+    try{localStorage.setItem('vfc_creds',JSON.stringify({email,pwdMd5,appId,anthropicKey}));}catch(e){}
+    try{const h=localStorage.getItem('vfc_h');if(h)S.history=JSON.parse(h);}catch(e){}
+
+    document.getElementById('bottomNav').style.display='flex';
+    initCtx();renderArtisti();renderTracce();renderPaes();
+
+    // Carica playlist esistenti da Qobuz e imposta numero progressivo
+    toast('Carico playlist esistenti…');
+    await loadExistingPlaylists();
+
+    showScreen('s-main');
+    window.scrollTo(0,0);
+    toast('Bentornato!');
+
+  }catch(e){
+    toast('Errore di rete — riprova');
+    btn.textContent='Entra';btn.disabled=false;
+  }
+}
+
+async function loadExistingPlaylists(){
+  try{
+    const res=await fetch(`https://www.qobuz.com/api.json/0.2/playlist/getUserPlaylists?limit=100&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
+    const data=await res.json();
+    if(!data.playlists||!data.playlists.items)return;
+
+    // Filtra solo playlist "Vista fuori campo //"
+    const vfc=data.playlists.items.filter(p=>p.name&&p.name.startsWith('Vista fuori campo //'));
+    if(vfc.length===0){updateNum();return;}
+
+    // Ricostruisce storia dai metadati nascosti nella descrizione
+    const rebuilt=[];
+    vfc.forEach(p=>{
+      const numMatch=p.name.match(/Rilievo (\d+)/);
+      const num=numMatch?parseInt(numMatch[1]):null;
+      if(!num)return;
+
+      let meta={};
+      if(p.description){
+        const metaMatch=p.description.match(/#vfc:(\{.+\})/);
+        if(metaMatch){try{meta=JSON.parse(metaMatch[1]);}catch(e){}}
+      }
+
+      rebuilt.push({
+        num,
+        titolo:p.name,
+        sottotitolo:p.description?p.description.split('\n')[0]:'',
+        descrizione:'',
+        brani:[],
+        durata:meta.durata||'—',
+        dir:meta.dir||'tratto',
+        mezzo:meta.mezzo||'treno',
+        energia:meta.energia||'media',
+        luce:meta.luce||'parz',
+        stagione:meta.stagione||'primavera',
+        like:meta.like||null,
+        note:meta.note||'',
+        data:meta.data||'',
+        qobuzId:p.id
+      });
+    });
+
+    // Ordina per numero
+    rebuilt.sort((a,b)=>b.num-a.num);
+
+    // Merge con storia locale — la locale ha più dettagli (brani, motivazioni)
+    const localMap={};
+    S.history.forEach(h=>{localMap[h.num]=h;});
+    S.history=rebuilt.map(r=>localMap[r.num]?{...r,...localMap[r.num],qobuzId:r.qobuzId}:r);
+
+    // Trova buchi e imposta prossimo numero
+    const usedNums=rebuilt.map(r=>r.num);
+    const maxNum=Math.max(...usedNums);
+    const gaps=[];
+    for(let i=1;i<=maxNum;i++){if(!usedNums.includes(i))gaps.push(i);}
+
+    S.nextNum=gaps.length>0?gaps[0]:maxNum+1;
+    saveState();
+    updateNum();
+
+    if(gaps.length>0)toast(`Buco trovato al n.${String(gaps[0]).padStart(2,'0')}`);
+
+  }catch(e){
+    try{const n=localStorage.getItem('vfc_n');if(n)S.nextNum=parseInt(n);}catch(e2){}
+    updateNum();
+  }
+}
+
+// AUTO-LOGIN all'avvio
+window.addEventListener('DOMContentLoaded', async ()=>{
+  let creds=null;
+  try{
+    const saved=localStorage.getItem('vfc_creds');
+    if(saved) creds=JSON.parse(saved);
+  }catch(e){}
+
+  if(!creds||!creds.email||!creds.pwdMd5||!creds.appId||!creds.anthropicKey) return;
+
+  // Mostra schermata di caricamento
+  document.getElementById('s-login').innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px">
+      <div style="font-family:'Playfair Display',serif;font-size:36px;color:var(--gold);font-style:italic">Vista fuori campo</div>
+      <div style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3)">Accesso in corso…</div>
+      <div class="spinner" style="display:block;width:20px;height:20px;border-width:2px"></div>
+    </div>`;
+
+  try{
+    const res=await fetch(`https://www.qobuz.com/api.json/0.2/user/login?email=${encodeURIComponent(creds.email)}&password=${creds.pwdMd5}&app_id=${creds.appId}`);
+    const data=await res.json();
+
+    if(data.status==='error'||!data.user_auth_token){
+      location.reload();
+      return;
+    }
+
+    S.token=data.user_auth_token;
+    S.appId=creds.appId;
+    S.anthropicKey=creds.anthropicKey;
+    S.userId=data.user.id;
+
+    try{const h=localStorage.getItem('vfc_h');if(h)S.history=JSON.parse(h);}catch(e){}
+
+    document.getElementById('bottomNav').style.display='flex';
+    initCtx();renderArtisti();renderTracce();renderPaes();
+    await loadExistingPlaylists();
+    showScreen('s-main');
+    window.scrollTo(0,0);
+
+  }catch(e){
+    // Errore silenzioso — resta sul login
+    console.log('Auto-login fallito',e);
+  }
+});
+function md5(s){function L(k,d){return(k<<d)|(k>>>(32-d))}function K(G,k){var I,d,F,H,x;F=(G&2147483648);H=(k&2147483648);I=(G&1073741824);d=(k&1073741824);x=(G&1073741823)+(k&1073741823);if(I&d){return(x^2147483648^F^H)}if(I|d){if(x&1073741824){return(x^3221225472^F^H)}else{return(x^1073741824^F^H)}}else{return(x^F^H)}}function r(d,F,k,I,G,H,x){d=K(d,K(K((F&k)|(~F&I),G),x));return K(L(d,H),F)}function q(d,F,k,I,G,H,x){d=K(d,K(K((F&I)|(k&~I),G),x));return K(L(d,H),F)}function p(d,F,k,I,G,H,x){d=K(d,K(K(F^k^I,G),x));return K(L(d,H),F)}function n(d,F,k,I,G,H,x){d=K(d,K(K(k^(F|~I),G),x));return K(L(d,H),F)}function u(G){var F=G.length,k=1024;var d=new Array(Math.ceil((F+9)/64)*16);for(var H=0;H<d.length*4;H++){d[H>>2]|=0}for(var H=0;H<F;H++){d[H>>2]|=(G.charCodeAt(H)&255)<<((H%4)*8)}d[H>>2]|=128<<((H%4)*8);d[d.length-2]=F*8;return d}var e=Array();var g,f,V,U,T,S2,R,Q,P;var A=7,B=12,C=17,D=22;var E=5,J=9,M=14,N=20;var O=4,W=11,X=16,Y=23;var Z=6,ab=10,bb=15,cb=21;s=s.replace(/\r\n/g,"\n");var db="";for(var eb=0;eb<s.length;eb++){var fb=s.charCodeAt(eb);if(fb<128){db+=String.fromCharCode(fb)}else if((fb>127)&&(fb<2048)){db+=String.fromCharCode((fb>>6)|192);db+=String.fromCharCode((fb&63)|128)}else{db+=String.fromCharCode((fb>>12)|224);db+=String.fromCharCode(((fb>>6)&63)|128);db+=String.fromCharCode((fb&63)|128)}}s=db;e=u(s);T=1732584193;S2=4023233417;R=2562383102;Q=271733878;for(g=0;g<e.length;g+=16){f=T;V=S2;U=R;t=Q;T=r(T,S2,R,Q,e[g+0],A,3614090360);Q=r(Q,T,S2,R,e[g+1],B,3905402710);R=r(R,Q,T,S2,e[g+2],C,606105819);S2=r(S2,R,Q,T,e[g+3],D,3250441966);T=r(T,S2,R,Q,e[g+4],A,4118548399);Q=r(Q,T,S2,R,e[g+5],B,1200080426);R=r(R,Q,T,S2,e[g+6],C,2821735955);S2=r(S2,R,Q,T,e[g+7],D,4249261313);T=r(T,S2,R,Q,e[g+8],A,1770035416);Q=r(Q,T,S2,R,e[g+9],B,2336552879);R=r(R,Q,T,S2,e[g+10],C,4294925233);S2=r(S2,R,Q,T,e[g+11],D,2304563134);T=r(T,S2,R,Q,e[g+12],A,1804603682);Q=r(Q,T,S2,R,e[g+13],B,4254626195);R=r(R,Q,T,S2,e[g+14],C,2792965006);S2=r(S2,R,Q,T,e[g+15],D,1236535329);T=q(T,S2,R,Q,e[g+1],E,4129170786);Q=q(Q,T,S2,R,e[g+6],J,3225465664);R=q(R,Q,T,S2,e[g+11],M,643717713);S2=q(S2,R,Q,T,e[g+0],N,3921069994);T=q(T,S2,R,Q,e[g+5],E,3593408605);Q=q(Q,T,S2,R,e[g+10],J,38016083);R=q(R,Q,T,S2,e[g+15],M,3634488961);S2=q(S2,R,Q,T,e[g+4],N,3889429448);T=q(T,S2,R,Q,e[g+9],E,568446438);Q=q(Q,T,S2,R,e[g+14],J,3275163606);R=q(R,Q,T,S2,e[g+3],M,4107603335);S2=q(S2,R,Q,T,e[g+8],N,1163531501);T=q(T,S2,R,Q,e[g+13],E,2850285829);Q=q(Q,T,S2,R,e[g+2],J,4243563512);R=q(R,Q,T,S2,e[g+7],M,1735328473);S2=q(S2,R,Q,T,e[g+12],N,2368359562);T=p(T,S2,R,Q,e[g+5],O,4294588738);Q=p(Q,T,S2,R,e[g+8],W,2272392833);R=p(R,Q,T,S2,e[g+11],X,1839030562);S2=p(S2,R,Q,T,e[g+14],Y,4259657740);T=p(T,S2,R,Q,e[g+1],O,2763975236);Q=p(Q,T,S2,R,e[g+4],W,1272893353);R=p(R,Q,T,S2,e[g+7],X,4139469664);S2=p(S2,R,Q,T,e[g+10],Y,3200236656);T=p(T,S2,R,Q,e[g+13],O,681279174);Q=p(Q,T,S2,R,e[g+0],W,3936430074);R=p(R,Q,T,S2,e[g+3],X,3572445317);S2=p(S2,R,Q,T,e[g+6],Y,76029189);T=p(T,S2,R,Q,e[g+9],O,3654602809);Q=p(Q,T,S2,R,e[g+12],W,3873151461);R=p(R,Q,T,S2,e[g+15],X,530742520);S2=p(S2,R,Q,T,e[g+2],Y,3299628645);T=n(T,S2,R,Q,e[g+0],Z,4096336452);Q=n(Q,T,S2,R,e[g+7],ab,1126891415);R=n(R,Q,T,S2,e[g+14],bb,2878612391);S2=n(S2,R,Q,T,e[g+5],cb,4237533241);T=n(T,S2,R,Q,e[g+12],Z,1700485571);Q=n(Q,T,S2,R,e[g+3],ab,2399980690);R=n(R,Q,T,S2,e[g+10],bb,4293915773);S2=n(S2,R,Q,T,e[g+1],cb,2240044497);T=n(T,S2,R,Q,e[g+8],Z,1873313359);Q=n(Q,T,S2,R,e[g+15],ab,4264355552);R=n(R,Q,T,S2,e[g+6],bb,2734768916);S2=n(S2,R,Q,T,e[g+13],cb,1309151649);T=n(T,S2,R,Q,e[g+4],Z,4149444226);Q=n(Q,T,S2,R,e[g+11],ab,3174756917);R=n(R,Q,T,S2,e[g+2],bb,718787259);S2=n(S2,R,Q,T,e[g+9],cb,3951481745);T=K(T,f);S2=K(S2,V);R=K(R,U);Q=K(Q,t)}var h=m(T)+m(S2)+m(R)+m(Q);return h.toLowerCase()}function m(d){var k="",F="",G,H;for(G=0;G<=3;G++){H=(d>>>(G*8))&255;F="0"+H.toString(16);k+=F.substr(F.length-2,2)}return k}
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+function navTo(s,n){showScreen(s);document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));document.getElementById(n).classList.add('active');}
+
+function setDir(d){
+  S.dir=d;
+  document.getElementById('btnT').classList.toggle('active',d==='tratto');
+  document.getElementById('btnR').classList.toggle('active',d==='riflesso');
+  renderPaes();updateBonusSub();
+}
+function renderPaes(){
+  document.getElementById('paesStrip').innerHTML=PAES[S.dir].map((p,i)=>`
+    <span class="paes-item">
+      <span class="paes-word">${p}</span>
+      ${i<3?`<span class="paes-arr"><svg width="12" height="12" stroke="currentColor" fill="none" stroke-width="1.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>`:''}
+    </span>`).join('');
+}
+
+function setMezzo(m){
+  S.mezzo=m;
+  document.getElementById('swTreno').classList.toggle('on',m==='treno');
+  document.getElementById('swAuto').classList.toggle('on',m==='auto');
+  document.getElementById('durTarget').textContent=DUR[m].l;
+}
+function setEnergia(e){
+  S.energia=e;
+  ['bassa','media','alta'].forEach(k=>document.getElementById('en-'+k).classList.toggle('on',k===e));
+}
+
+function renderArtisti(){
+  document.getElementById('artistiList').innerHTML=S.artisti.map((a,i)=>`
+    <div class="art-item">
+      <span class="art-n">${i+1}</span>
+      <input class="art-input" value="${a}" placeholder="Artista / intorno" oninput="S.artisti[${i}]=this.value">
+      <button class="art-del" onclick="delArtista(${i})"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+    </div>`).join('');
+  document.getElementById('addArtBtn').style.display=S.artisti.length>=5?'none':'flex';
+}
+function addArtista(){if(S.artisti.length>=5)return;S.artisti.push('');renderArtisti();document.querySelectorAll('.art-input')[S.artisti.length-1].focus();}
+function delArtista(i){if(S.artisti.length<=3){toast('Minimo 3 intorni');return}S.artisti.splice(i,1);renderArtisti();}
+
+function renderTracce(){
+  document.getElementById('tracceList').innerHTML=S.tracce.map((t,i)=>`
+    <div class="traccia-item">
+      <div class="traccia-hrow">
+        <svg width="12" height="12" style="color:var(--text3)"><use href="#i-pin"/></svg>
+        <span class="traccia-label">vincolata ${i+1}</span>
+        <button class="traccia-del" onclick="delTraccia(${i})"><svg width="14" height="14" stroke="currentColor" fill="none" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="traccia-inputs">
+        <input class="traccia-in" value="${t.artista}" placeholder="Artista" oninput="S.tracce[${i}].artista=this.value">
+        <input class="traccia-in" value="${t.titolo}" placeholder="Titolo brano" oninput="S.tracce[${i}].titolo=this.value">
+      </div>
+    </div>`).join('');
+  document.getElementById('addTracBtn').style.display=S.tracce.length>=3?'none':'flex';
+}
+function addTraccia(){if(S.tracce.length>=3)return;S.tracce.push({artista:'',titolo:''});renderTracce();}
+function delTraccia(i){S.tracce.splice(i,1);renderTracce();}
+
+function toggleBonus(){S.bonusOn=!S.bonusOn;document.getElementById('bonusSwitch').classList.toggle('on',S.bonusOn);updateBonusSub();}
+function updateBonusSub(){document.getElementById('bonusSub').textContent=S.bonusOn?BONUS_CTX[S.dir]:'—';}
+
+function overrideNum(){
+  const val=prompt('Imposta il numero progressivo:',S.nextNum);
+  if(val===null)return;
+  const n=parseInt(val);
+  if(isNaN(n)||n<1){toast('Numero non valido');return}
+  S.nextNum=n;updateNum();saveState();toast('Numero aggiornato');
+}
+function updateNum(){const n=String(S.nextNum).padStart(2,'0');document.getElementById('nextNum').textContent=n;document.getElementById('nextNumTitle').textContent=n;}
+function saveState(){try{localStorage.setItem('vfc_h',JSON.stringify(S.history));localStorage.setItem('vfc_n',String(S.nextNum));}catch(e){}}
+
+async function generatePlaylist(){
+  const artisti=S.artisti.filter(a=>a.trim());
+  if(artisti.length<3){toast('Inserisci almeno 3 intorni');return}
+  const btn=document.getElementById('genBtn');
+  btn.classList.add('loading');
+  document.getElementById('genIcon').style.display='none';
+  document.getElementById('genTxt').textContent='Generazione…';
+  showScreen('s-result');
+  ['tracklist','rTitle','rSub','rDesc'].forEach(id=>document.getElementById(id)[id==='tracklist'?'innerHTML':'textContent']=id==='rTitle'?'—':'');
+
+  const num=String(S.nextNum).padStart(2,'0'),tag=S.dir==='tratto'?'[tratto]':'[riflesso]';
+  const prog=PAES[S.dir].join(' → '),dur=DUR[S.mezzo];
+  document.getElementById('durTarget').textContent=dur.l;
+  const lMood={sole:'Energico, luminoso, aperto',parz:'Morbido, sospeso, ambivalente',cop:'Introspettivo, denso, rallentato',not:'Acido, industriale, scuro — techno, post-industrial'}[S.luce];
+  const eMood={bassa:'Energia bassa, contemplativo, ritmo contenuto',media:'Equilibrio tra riflessione e movimento',alta:'Ritmo sostenuto, dinamico'}[S.energia];
+  const pinned=S.tracce.filter(t=>t.artista&&t.titolo);
+  const fb=S.history.slice(0,5).map(h=>`#${h.num}: ${h.like===true?'👍':h.like===false?'👎':'—'}${h.note?' ('+h.note+')':''} [${h.brani.map(b=>b.artista).join(', ')}]`).join('\n');
+  const varDesc=document.getElementById('varDesc').value.trim();
+
+  const prompt=`Curatore musicale con sensibilità documentaristica. Progetto "Vista fuori campo", rilievi sonori ispirati a Richard Misrach.
+
+Titolo: "Vista fuori campo // Rilievo ${num} ${tag}"
+Direzione: ${S.dir==='tratto'?'ANDATA':'RITORNO'} — progressione: ${prog}
+Mezzo: ${S.mezzo} — durata TASSATIVA: ${dur.min}–${dur.max} min${S.bonusOn?` + bonus (${BONUS_CTX[S.dir]})`:''}
+Stagione: ${S.stagione} — Luce: ${lMood} — Energia: ${eMood}${varDesc?'\nVariazioni: '+varDesc:''}
+
+Contesto: pedemontana Prealpi Giulie → pianura nord-est → periferia. Treno. Cime innevate, piloni alta tensione (vecchi e abbandonati), capannoni (in rovina o enormi), lati B delle case, ${S.dir==='tratto'?'strada stazione multiculturale':'arrivo a casa ai piedi del bosco'}.
+
+Intorni musicali (punti di partenza, privilegia scoperta):
+${artisti.map((a,i)=>`${i+1}. ${a}`).join('\n')}${pinned.length?'\nVincolate:\n'+pinned.map(t=>`"${t.titolo}" di ${t.artista}`).join('\n'):''}
+${fb?'\nFeedback recenti:\n'+fb:''}
+
+Sottotitolo: frase "found narrative" stile Misrach — da graffito/segno antropico, con luogo documentato.
+
+Rispondi SOLO con JSON:
+{"titolo":"Vista fuori campo // Rilievo ${num} ${tag}","sottotitolo":"...","descrizione":"...","brani":[{"pos":1,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][0]}","motivazione":"..."},{"pos":2,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":3,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][2]}","motivazione":"..."},{"pos":4,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][3]}","motivazione":"..."}${S.bonusOn?',{"pos":5,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"Bonus","motivazione":"...","bonus":true}':''}],"durata_totale":"MM:SS"}`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    const pl=JSON.parse(data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
+    pl.brani.forEach(b=>{b.pinned=pinned.some(p=>b.titolo.toLowerCase().includes(p.titolo.toLowerCase()));});
+    S.currentPl=pl;renderResult(pl);
+  }catch(e){toast('Errore — riprova');showScreen('s-main');}
+  btn.classList.remove('loading');
+  document.getElementById('genIcon').style.display='';
+  document.getElementById('genTxt').textContent='Genera rilievo';
+}
+
+function renderResult(pl){
+  document.getElementById('rKicker').textContent=S.dir==='tratto'?'Andata · [tratto]':'Ritorno · [riflesso]';
+  document.getElementById('rTitle').textContent=pl.titolo;
+  document.getElementById('rSub').textContent=pl.sottotitolo;
+  document.getElementById('rDesc').textContent=pl.descrizione;
+  document.getElementById('tracklist').innerHTML=pl.brani.map(b=>`
+    <div class="track${b.bonus?' bonus':''}">
+      <div class="track-num">${String(b.pos).padStart(2,'0')}</div>
+      <div class="track-body">
+        <div class="track-row1"><div class="track-name">${b.titolo}</div><div class="track-dur">${b.durata}</div></div>
+        <div class="track-artist">${b.artista}</div>
+        <div class="track-album">${b.album}</div>
+        <div class="track-tags">
+          <span class="track-tag">${b.paesaggio}</span>
+          ${b.pinned?'<span class="track-tag pinned">vincolata</span>':''}
+        </div>
+        <div class="track-note">${b.motivazione}</div>
+        <div class="track-status" id="qs-${b.pos}">
+          <div class="sdot s-wait"></div>Verifica Qobuz…
+        </div>
+      </div>
+    </div>`).join('');
+  const tot=pl.durata_totale||'—';
+  document.getElementById('durTot').textContent=tot;
+  const mins=tot.split(':').map(Number).reduce((a,v,i)=>i===0?v:a+v/60,0);
+  const max=DUR[S.mezzo].max;
+  setTimeout(()=>{const b=document.getElementById('durBar');b.style.width=Math.min(mins/max*100,100)+'%';b.classList.toggle('over',mins>max+2);},100);
+  pl.brani.forEach(b=>setTimeout(async()=>{
+    const el=document.getElementById('qs-'+b.pos);if(!el)return;
+    el.innerHTML=`<div class="sdot s-wait"></div>Verifica Qobuz…`;
+    try{
+      const q=encodeURIComponent(`${b.artista} ${b.titolo}`);
+      const res=await fetch(`https://www.qobuz.com/api.json/0.2/catalog/search?query=${q}&limit=5&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
+      const data=await res.json();
+      const found=data.tracks&&data.tracks.items&&data.tracks.items.length>0;
+      if(found){
+        b.qobuzId=data.tracks.items[0].id;
+        el.innerHTML=`<div class="sdot s-ok"></div>Disponibile su Qobuz`;
+      } else {
+        el.innerHTML=`<div class="sdot s-no"></div>Non trovato — alternativa in coda`;
+      }
+    }catch(e){
+      el.innerHTML=`<div class="sdot s-no"></div>Verifica non disponibile`;
+    }
+  },700+b.pos*400));
+}
+
+async function saveToQobuz(){
+  const pl=S.currentPl;if(!pl)return;
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true;btn.innerHTML='<div class="spinner" style="display:block;margin:0 auto"></div>';
+
+  try{
+    // Metadati nascosti da salvare nella descrizione
+    const entry={num:S.nextNum,dir:S.dir,mezzo:S.mezzo,energia:S.energia,luce:S.luce,stagione:S.stagione,titolo:pl.titolo,sottotitolo:pl.sottotitolo,descrizione:pl.descrizione,brani:pl.brani,durata:pl.durata_totale,like:null,note:'',data:new Date().toISOString()};
+    const meta=JSON.stringify({num:entry.num,dir:entry.dir,mezzo:entry.mezzo,energia:entry.energia,luce:entry.luce,stagione:entry.stagione,durata:entry.durata,like:null,note:'',data:entry.data});
+    const description=`${pl.sottotitolo}\n\n${pl.descrizione}\n\n#vfc:${meta}`;
+
+    // 1. Crea playlist su Qobuz
+    const createRes=await fetch(`https://www.qobuz.com/api.json/0.2/playlist/create`,{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
+      body:new URLSearchParams({name:pl.titolo,description,is_public:0,app_id:S.appId})
+    });
+    const createData=await createRes.json();
+    if(!createData.id){throw new Error('Playlist non creata')}
+    const playlistId=createData.id;
+    entry.qobuzId=playlistId;
+
+    // 2. Aggiungi tracce
+    const trackIds=pl.brani.filter(b=>b.qobuzId).map(b=>b.qobuzId);
+    if(trackIds.length>0){
+      await fetch(`https://www.qobuz.com/api.json/0.2/playlist/addTracks`,{
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
+        body:new URLSearchParams({playlist_id:playlistId,track_ids:trackIds.join(','),app_id:S.appId})
+      });
+    }
+
+    S.history.unshift(entry);
+    S.nextNum++;updateNum();saveState();
+    toast('✓ Rilievo salvato su Qobuz');
+    navTo('s-serie','nav-s');renderSerie();
+
+  }catch(e){
+    toast('Errore nel salvataggio — riprova');
+  }
+  btn.disabled=false;
+  btn.innerHTML='<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Salva su Qobuz';
+}
+
+function renderSerie(){
+  document.getElementById('stTot').textContent=S.history.length;
+  document.getElementById('stT').textContent=S.history.filter(h=>h.dir==='tratto').length;
+  document.getElementById('stR').textContent=S.history.filter(h=>h.dir==='riflesso').length;
+  document.getElementById('stL').textContent=S.history.filter(h=>h.like===true).length;
+  const list=document.getElementById('serieList');
+  if(!S.history.length){list.innerHTML='<div class="empty">Nessun rilievo ancora.<br>Genera il primo.</div>';return}
+  list.innerHTML=S.history.map((h,i)=>`
+    <div class="ril">
+      <div class="ril-top">
+        <div class="ril-num">${String(h.num).padStart(2,'0')}</div>
+        <div class="ril-info">
+          <div class="ril-title">${h.titolo}</div>
+          <div class="ril-sub">${h.sottotitolo||''}</div>
+          <div class="ril-meta">
+            <span class="ril-tag">${h.dir==='tratto'?'[tratto]':'[riflesso]'}</span>
+            <span>${h.brani.length} brani · ${h.durata} · ${h.mezzo} · ${h.stagione}</span>
+          </div>
+        </div>
+        <div class="ril-actions">
+          <button class="like-btn ${h.like===true?'liked':h.like===false?'disliked':''}" onclick="cycleLike(${i})">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+          <button class="expand-btn" id="exp-${i}" onclick="toggleExp(${i})">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <button onclick="deleteRilievo(${i})" style="background:transparent;border:none;color:var(--text3);cursor:pointer;padding:4px;display:flex;align-items:center">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="ril-tracks" id="tr-${i}">
+        ${h.brani.map(b=>`
+          <div class="rt">
+            <span class="rt-n">${String(b.pos).padStart(2,'0')}</span>
+            <div class="rt-info">
+              <div class="rt-name">${b.titolo}</div>
+              <div class="rt-artist">${b.artista} — ${b.album}</div>
+              <span class="rt-tag">${b.paesaggio}</span>
+            </div>
+            <span class="rt-dur">${b.durata}</span>
+          </div>`).join('')}
+        <textarea class="note-area" rows="2" placeholder="Note di ascolto…" oninput="S.history[${i}].note=this.value">${h.note||''}</textarea>
+        <button class="note-save" onclick="saveNote(${i})">salva nota</button>
+        <button class="export-link" onclick="openExport(${i})">
+          <svg width="12" height="12"><use href="#i-export"/></svg>
+          esporta rilievo
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+function toggleExp(i){document.getElementById('tr-'+i).classList.toggle('open');document.getElementById('exp-'+i).classList.toggle('open');}
+function cycleLike(i){
+  const h=S.history[i];
+  h.like=h.like===null||h.like===undefined?true:h.like===true?false:null;
+  saveState();
+  syncMetaToQobuz(h);
+  renderSerie();
+}
+
+function saveNote(i){
+  saveState();
+  syncMetaToQobuz(S.history[i]);
+  toast('Nota salvata');
+}
+
+async function syncMetaToQobuz(h){
+  if(!h.qobuzId||!S.token)return;
+  try{
+    const meta=JSON.stringify({num:h.num,dir:h.dir,mezzo:h.mezzo,energia:h.energia,luce:h.luce,stagione:h.stagione,durata:h.durata,like:h.like,note:h.note,data:h.data});
+    const desc=`${h.sottotitolo||''}\n\n${h.descrizione||''}\n\n#vfc:${meta}`;
+    await fetch(`https://www.qobuz.com/api.json/0.2/playlist/update`,{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
+      body:new URLSearchParams({playlist_id:h.qobuzId,description:desc,app_id:S.appId})
+    });
+  }catch(e){console.log('Sync fallito',e);}
+}
+  const h=S.history[i];
+  if(!confirm(`Eliminare "${h.titolo}"?`))return;
+
+  // Elimina su Qobuz se abbiamo l'ID
+  if(h.qobuzId&&S.token){
+    try{
+      await fetch(`https://www.qobuz.com/api.json/0.2/playlist/delete`,{
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
+        body:new URLSearchParams({playlist_id:h.qobuzId,app_id:S.appId})
+      });
+    }catch(e){console.log('Errore eliminazione Qobuz',e);}
+  }
+
+  // Libera il numero — aggiungilo ai buchi
+  const freedNum=h.num;
+  S.history.splice(i,1);
+
+  // Proponi il numero liberato come prossimo se è minore del corrente
+  if(freedNum<S.nextNum){
+    S.nextNum=freedNum;
+    updateNum();
+    toast(`Rilievo eliminato — n.${String(freedNum).padStart(2,'0')} disponibile`);
+  } else {
+    toast('Rilievo eliminato');
+  }
+
+  saveState();renderSerie();
+}
+function openExport(i){
+  const h=S.history[i];
+  document.getElementById('exportTxt').textContent=`${h.titolo}\n${h.sottotitolo||''}\n\n${h.descrizione||''}\n\n${h.brani.map(b=>`${String(b.pos).padStart(2,'0')}  ${b.artista} — ${b.titolo}\n    ${b.album} · ${b.durata} · ${b.paesaggio}`).join('\n\n')}\n\n${h.durata} · ${h.mezzo} · ${h.stagione} · ${h.dir}`;
+  document.getElementById('exportSheet').classList.add('open');
+}
+function closeSheet(e){if(e.target.id==='exportSheet')document.getElementById('exportSheet').classList.remove('open');}
+function copyExport(){navigator.clipboard.writeText(document.getElementById('exportTxt').textContent).then(()=>toast('Copiato'));}
+
+let toastT;
+function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2600);}
+</script>
+</body>
+</html>
