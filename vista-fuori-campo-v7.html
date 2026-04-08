@@ -7,7 +7,21 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Vista fuori campo">
-<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;Vista fuori campo&quot;,&quot;short_name&quot;:&quot;VFC&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230e0d0b&quot;,&quot;theme_color&quot;:&quot;%230e0d0b&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230e0d0b'/%3E%3Ctext x='256' y='320' font-size='280' text-anchor='middle' fill='%23b8a272' font-family='serif' font-style='italic'%3EV%3C/text%3E%3C/svg%3E&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]}">
+<link rel="manifest" id="pwa-manifest">
+<script>
+const iconSrc = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9Ijk2IiBmaWxsPSIjMGUwZDBiIi8+CiAgPHRleHQgeD0iMjU2IiB5PSIzMTAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjIwMCIgZm9udC1zdHlsZT0iaXRhbGljIiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjYjhhMjcyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5WRkM8L3RleHQ+CiAgPHRleHQgeD0iMjU2IiB5PSIzNzAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjQ4IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjNDY0MjNjIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBsZXR0ZXItc3BhY2luZz0iMTIiPlJJTElFVkk8L3RleHQ+Cjwvc3ZnPg==";
+const manifest = {
+  name: "Vista fuori campo",
+  short_name: "VFC",
+  start_url: ".",
+  display: "standalone",
+  background_color: "#0e0d0b",
+  theme_color: "#0e0d0b",
+  icons: [{src: iconSrc, sizes: "512x512", type: "image/svg+xml"}]
+};
+const blob = new Blob([JSON.stringify(manifest)], {type: "application/json"});
+document.getElementById("pwa-manifest").href = URL.createObjectURL(blob);
+</script>
 <title>Vista fuori campo</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -715,13 +729,19 @@ async function doLogin(){
     document.getElementById('bottomNav').style.display='flex';
     initCtx();renderArtisti();renderTracce();renderPaes();
 
-    // Carica playlist esistenti da Qobuz e imposta numero progressivo
-    toast('Carico playlist esistenti…');
-    await loadExistingPlaylists();
+    try{
+      await Promise.race([
+        loadExistingPlaylists(),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),8000))
+      ]);
+    }catch(e){
+      try{const n=localStorage.getItem('vfc_n');if(n)S.nextNum=parseInt(n);}catch(e2){}
+      updateNum();
+    }
 
     showScreen('s-main');
     window.scrollTo(0,0);
-    toast('Bentornato!');
+    toast('Benvenuto su Vista fuori campo');
 
   }catch(e){
     toast('Errore di rete — riprova');
@@ -759,7 +779,7 @@ async function loadExistingPlaylists(){
         descrizione:'',
         brani:[],
         durata:meta.durata||'—',
-        dir: meta.dir || (p.name.includes('[tratto]') ? 'tratto' : p.name.includes('[riflesso]') ? 'riflesso' : 'tratto'),
+        dir: meta.dir || (p.name.toLowerCase().includes('[tratto]') ? 'tratto' : p.name.toLowerCase().includes('[riflesso]') ? 'riflesso' : 'tratto'),
         mezzo:meta.mezzo||'treno',
         energia:meta.energia||'media',
         luce:meta.luce||'parz',
@@ -833,7 +853,19 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 
     document.getElementById('bottomNav').style.display='flex';
     initCtx();renderArtisti();renderTracce();renderPaes();
-    await loadExistingPlaylists();
+
+    // Carica playlist con timeout — va avanti anche se fallisce
+    try{
+      await Promise.race([
+        loadExistingPlaylists(),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),8000))
+      ]);
+    }catch(e){
+      console.log('loadExistingPlaylists timeout/errore:',e);
+      try{const n=localStorage.getItem('vfc_n');if(n)S.nextNum=parseInt(n);}catch(e2){}
+      updateNum();
+    }
+
     showScreen('s-main');
     window.scrollTo(0,0);
     toast('Bentornato!');
@@ -955,7 +987,7 @@ Rispondi SOLO con JSON:
 {"titolo":"Vista fuori campo // Rilievo ${num} ${tag}","sottotitolo":"...","descrizione":"...","brani":[{"pos":1,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][0]}","motivazione":"..."},{"pos":2,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":3,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][2]}","motivazione":"..."},{"pos":4,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][3]}","motivazione":"..."}${S.bonusOn?',{"pos":5,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"Bonus","motivazione":"...","bonus":true}':''}],"durata_totale":"MM:SS"}`;
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
     const pl=JSON.parse(data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
     pl.brani.forEach(b=>{b.pinned=pinned.some(p=>b.titolo.toLowerCase().includes(p.titolo.toLowerCase()));});
