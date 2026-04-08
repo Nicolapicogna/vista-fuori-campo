@@ -711,7 +711,7 @@ async function doLogin(){
   const pwdMd5=md5(pwd);
 
   try{
-    const res=await fetch(`https://www.qobuz.com/api.json/0.2/user/login?email=${encodeURIComponent(email)}&password=${pwdMd5}&app_id=${appId}`);
+    const res=await fetch(`https://corsproxy.io/?https://www.qobuz.com/api.json/0.2/user/login?email=${encodeURIComponent(email)}&password=${pwdMd5}&app_id=${appId}`);
     const data=await res.json();
     if(data.status==='error'||!data.user_auth_token){
       toast(data.message||'Login fallito');
@@ -751,7 +751,7 @@ async function doLogin(){
 
 async function loadExistingPlaylists(){
   try{
-    const res=await fetch(`https://www.qobuz.com/api.json/0.2/playlist/getUserPlaylists?limit=100&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
+    const res=await fetch(`https://corsproxy.io/?https://www.qobuz.com/api.json/0.2/playlist/getUserPlaylists?limit=100&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
     const data=await res.json();
     if(!data.playlists||!data.playlists.items)return;
 
@@ -836,11 +836,11 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     </div>`;
 
   try{
-    const res=await fetch(`https://www.qobuz.com/api.json/0.2/user/login?email=${encodeURIComponent(creds.email)}&password=${creds.pwdMd5}&app_id=${creds.appId}`);
+    const res=await fetch(`https://corsproxy.io/?https://www.qobuz.com/api.json/0.2/user/login?email=${encodeURIComponent(creds.email)}&password=${creds.pwdMd5}&app_id=${creds.appId}`);
     const data=await res.json();
 
     if(data.status==='error'||!data.user_auth_token){
-      location.reload();
+      showScreen('s-login');
       return;
     }
 
@@ -1030,7 +1030,7 @@ function renderResult(pl){
     el.innerHTML=`<div class="sdot s-wait"></div>Verifica Qobuz…`;
     try{
       const q=encodeURIComponent(`${b.artista} ${b.titolo}`);
-      const res=await fetch(`https://www.qobuz.com/api.json/0.2/catalog/search?query=${q}&limit=5&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
+      const res=await fetch(`https://corsproxy.io/?https://www.qobuz.com/api.json/0.2/catalog/search?query=${q}&limit=5&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
       const data=await res.json();
       const found=data.tracks&&data.tracks.items&&data.tracks.items.length>0;
       if(found){
@@ -1057,7 +1057,7 @@ async function saveToQobuz(){
     const description=`${pl.sottotitolo}\n\n${pl.descrizione}\n\n#vfc:${meta}`;
 
     // 1. Crea playlist su Qobuz
-    const createRes=await fetch(`https://www.qobuz.com/api.json/0.2/playlist/create`,{
+    const createRes=await fetch(`https://corsproxy.io/?https://www.qobuz.com/api.json/0.2/playlist/create`,{
       method:'POST',
       headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
       body:new URLSearchParams({name:pl.titolo,description,is_public:0,app_id:S.appId})
@@ -1070,7 +1070,7 @@ async function saveToQobuz(){
     // 2. Aggiungi tracce
     const trackIds=pl.brani.filter(b=>b.qobuzId).map(b=>b.qobuzId);
     if(trackIds.length>0){
-      await fetch(`https://www.qobuz.com/api.json/0.2/playlist/addTracks`,{
+      await fetch(`https://corsproxy.io/?https://www.qobuz.com/api.json/0.2/playlist/addTracks`,{
         method:'POST',
         headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
         body:new URLSearchParams({playlist_id:playlistId,track_ids:trackIds.join(','),app_id:S.appId})
@@ -1161,7 +1161,7 @@ async function syncMetaToQobuz(h){
   try{
     const meta=JSON.stringify({num:h.num,dir:h.dir,mezzo:h.mezzo,energia:h.energia,luce:h.luce,stagione:h.stagione,durata:h.durata,like:h.like,note:h.note,data:h.data});
     const desc=`${h.sottotitolo||''}\n\n${h.descrizione||''}\n\n#vfc:${meta}`;
-    await fetch(`https://www.qobuz.com/api.json/0.2/playlist/update`,{
+    await fetch(`https://corsproxy.io/?https://www.qobuz.com/api.json/0.2/playlist/update`,{
       method:'POST',
       headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
       body:new URLSearchParams({playlist_id:h.qobuzId,description:desc,app_id:S.appId})
@@ -1176,7 +1176,7 @@ async function deleteRilievo(i){
   // Elimina su Qobuz se abbiamo l'ID
   if(h.qobuzId&&S.token){
     try{
-      await fetch(`https://www.qobuz.com/api.json/0.2/playlist/delete`,{
+      await fetch(`https://corsproxy.io/?https://www.qobuz.com/api.json/0.2/playlist/delete`,{
         method:'POST',
         headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
         body:new URLSearchParams({playlist_id:h.qobuzId,app_id:S.appId})
