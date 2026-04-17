@@ -753,7 +753,7 @@ async function loadExistingPlaylists(){
         descrizione:'',
         brani:[],
         durata:meta.durata||'—',
-        dir: meta.dir || (p.name.toLowerCase().includes('[tratto]') ? 'tratto' : p.name.toLowerCase().includes('[riflesso]') ? 'riflesso' : 'tratto'),
+        dir: meta.dir || (p.name.includes('[Tratto]') || p.name.includes('[tratto]') ? 'tratto' : p.name.includes('[Riflesso]') || p.name.includes('[riflesso]') ? 'riflesso' : 'tratto'),
         mezzo:meta.mezzo||'treno',
         energia:meta.energia||'media',
         luce:meta.luce||'parz',
@@ -823,7 +823,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
       updateNum();
     }
 
-    showScreen('s-main');
+    navTo('s-main','nav-g');
     window.scrollTo(0,0);
     toast('Bentornato!');
 
@@ -943,7 +943,7 @@ Prealpi Giulie pedemontane → pianura del nord-est italiano → periferia urban
 
 CAMPO SONORO DI RIFERIMENTO (non una lista da seguire — un orizzonte da esplorare):
 ${artisti.map((a,i)=>`${i+1}. ${a}`).join('\n')}
-Questi artisti definiscono la zona timbrica e emotiva del rilievo. Usali come bussola, non come confine. Puoi scegliere brani di questi artisti MA SOPRATTUTTO cerca artisti affini, meno noti, che abitano lo stesso spazio sonoro: stessa tensione, stesso timbro, stessa densità. La scoperta è il valore principale. Evita i brani più ovvi e commerciali. Privilegia lati B, album meno conosciuti, artisti di confine tra generi.${pinned.length?'\n\nBRANI VINCOLATI (devono essere inclusi):\n'+pinned.map(t=>`"${t.titolo}" di ${t.artista}`).join('\n'):''}
+Questi artisti definiscono la zona timbrica e emotiva del rilievo. Usali come bussola, non come confine. Puoi scegliere brani di questi artisti MA SOPRATTUTTO cerca artisti affini, meno noti, che abitano lo stesso spazio sonoro: stessa tensione, stesso timbro, stessa densità. La scoperta è il valore principale. Evita i brani più ovvi e commerciali. Privilegia lati B, album meno conosciuti, artisti di confine tra generi. Evita tassativamente artisti con posizioni ideologiche estreme, razziste o neonaziste (es. Burzum/Varg Vikernes e simili) — anche se musicalmente affini.${pinned.length?'\n\nBRANI VINCOLATI (devono essere inclusi):\n'+pinned.map(t=>`"${t.titolo}" di ${t.artista}`).join('\n'):''}
 ${fb?'\nFEEDBACK SUI RILIEVI PRECEDENTI (tienine conto per variare):\n'+fb:''}
 
 SOTTOTITOLO: una frase breve in stile "found narrative" — come se fosse un graffito, un cartello o una scritta trovata lungo il tragitto. Qualcosa di specifico, non generico.
