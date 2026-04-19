@@ -727,6 +727,7 @@ async function loadExistingPlaylists(){
   try{
     const res=await fetch(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/getUserPlaylists?limit=100&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
     const data=await res.json();
+    if(data.code===401||data.status==='error'){tokenScaduto();return;}
     if(!data.playlists||!data.playlists.items)return;
 
     // Filtra solo playlist "Vista fuori campo //"
@@ -801,6 +802,10 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 
   if(!creds||!creds.token||!creds.anthropicKey) return;
 
+  // Nascondi subito il login — mostra schermata di caricamento
+  document.getElementById('s-login').style.display='none';
+  document.getElementById('bottomNav').style.display='flex';
+
   try{
     S.token=creds.token;
     S.appId='798273057';
@@ -808,7 +813,6 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 
     try{const h=localStorage.getItem('vfc_h');if(h)S.history=JSON.parse(h);}catch(e){}
 
-    document.getElementById('bottomNav').style.display='flex';
     initCtx();renderArtisti();renderTracce();renderPaes();
 
     // Carica playlist con timeout — va avanti anche se fallisce
@@ -828,13 +832,23 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 
   }catch(e){
     console.log('Auto-login fallito',e);
-    navTo('s-main','nav-g');
-    window.scrollTo(0,0);
+    document.getElementById('s-login').style.display='';
+    document.getElementById('bottomNav').style.display='none';
+    showScreen('s-login');
   }
 });
 function md5(s){function L(k,d){return(k<<d)|(k>>>(32-d))}function K(G,k){var I,d,F,H,x;F=(G&2147483648);H=(k&2147483648);I=(G&1073741824);d=(k&1073741824);x=(G&1073741823)+(k&1073741823);if(I&d){return(x^2147483648^F^H)}if(I|d){if(x&1073741824){return(x^3221225472^F^H)}else{return(x^1073741824^F^H)}}else{return(x^F^H)}}function r(d,F,k,I,G,H,x){d=K(d,K(K((F&k)|(~F&I),G),x));return K(L(d,H),F)}function q(d,F,k,I,G,H,x){d=K(d,K(K((F&I)|(k&~I),G),x));return K(L(d,H),F)}function p(d,F,k,I,G,H,x){d=K(d,K(K(F^k^I,G),x));return K(L(d,H),F)}function n(d,F,k,I,G,H,x){d=K(d,K(K(k^(F|~I),G),x));return K(L(d,H),F)}function u(G){var F=G.length,k=1024;var d=new Array(Math.ceil((F+9)/64)*16);for(var H=0;H<d.length*4;H++){d[H>>2]|=0}for(var H=0;H<F;H++){d[H>>2]|=(G.charCodeAt(H)&255)<<((H%4)*8)}d[H>>2]|=128<<((H%4)*8);d[d.length-2]=F*8;return d}var e=Array();var g,f,V,U,T,S2,R,Q,P;var A=7,B=12,C=17,D=22;var E=5,J=9,M=14,N=20;var O=4,W=11,X=16,Y=23;var Z=6,ab=10,bb=15,cb=21;s=s.replace(/\r\n/g,"\n");var db="";for(var eb=0;eb<s.length;eb++){var fb=s.charCodeAt(eb);if(fb<128){db+=String.fromCharCode(fb)}else if((fb>127)&&(fb<2048)){db+=String.fromCharCode((fb>>6)|192);db+=String.fromCharCode((fb&63)|128)}else{db+=String.fromCharCode((fb>>12)|224);db+=String.fromCharCode(((fb>>6)&63)|128);db+=String.fromCharCode((fb&63)|128)}}s=db;e=u(s);T=1732584193;S2=4023233417;R=2562383102;Q=271733878;for(g=0;g<e.length;g+=16){f=T;V=S2;U=R;t=Q;T=r(T,S2,R,Q,e[g+0],A,3614090360);Q=r(Q,T,S2,R,e[g+1],B,3905402710);R=r(R,Q,T,S2,e[g+2],C,606105819);S2=r(S2,R,Q,T,e[g+3],D,3250441966);T=r(T,S2,R,Q,e[g+4],A,4118548399);Q=r(Q,T,S2,R,e[g+5],B,1200080426);R=r(R,Q,T,S2,e[g+6],C,2821735955);S2=r(S2,R,Q,T,e[g+7],D,4249261313);T=r(T,S2,R,Q,e[g+8],A,1770035416);Q=r(Q,T,S2,R,e[g+9],B,2336552879);R=r(R,Q,T,S2,e[g+10],C,4294925233);S2=r(S2,R,Q,T,e[g+11],D,2304563134);T=r(T,S2,R,Q,e[g+12],A,1804603682);Q=r(Q,T,S2,R,e[g+13],B,4254626195);R=r(R,Q,T,S2,e[g+14],C,2792965006);S2=r(S2,R,Q,T,e[g+15],D,1236535329);T=q(T,S2,R,Q,e[g+1],E,4129170786);Q=q(Q,T,S2,R,e[g+6],J,3225465664);R=q(R,Q,T,S2,e[g+11],M,643717713);S2=q(S2,R,Q,T,e[g+0],N,3921069994);T=q(T,S2,R,Q,e[g+5],E,3593408605);Q=q(Q,T,S2,R,e[g+10],J,38016083);R=q(R,Q,T,S2,e[g+15],M,3634488961);S2=q(S2,R,Q,T,e[g+4],N,3889429448);T=q(T,S2,R,Q,e[g+9],E,568446438);Q=q(Q,T,S2,R,e[g+14],J,3275163606);R=q(R,Q,T,S2,e[g+3],M,4107603335);S2=q(S2,R,Q,T,e[g+8],N,1163531501);T=q(T,S2,R,Q,e[g+13],E,2850285829);Q=q(Q,T,S2,R,e[g+2],J,4243563512);R=q(R,Q,T,S2,e[g+7],M,1735328473);S2=q(S2,R,Q,T,e[g+12],N,2368359562);T=p(T,S2,R,Q,e[g+5],O,4294588738);Q=p(Q,T,S2,R,e[g+8],W,2272392833);R=p(R,Q,T,S2,e[g+11],X,1839030562);S2=p(S2,R,Q,T,e[g+14],Y,4259657740);T=p(T,S2,R,Q,e[g+1],O,2763975236);Q=p(Q,T,S2,R,e[g+4],W,1272893353);R=p(R,Q,T,S2,e[g+7],X,4139469664);S2=p(S2,R,Q,T,e[g+10],Y,3200236656);T=p(T,S2,R,Q,e[g+13],O,681279174);Q=p(Q,T,S2,R,e[g+0],W,3936430074);R=p(R,Q,T,S2,e[g+3],X,3572445317);S2=p(S2,R,Q,T,e[g+6],Y,76029189);T=p(T,S2,R,Q,e[g+9],O,3654602809);Q=p(Q,T,S2,R,e[g+12],W,3873151461);R=p(R,Q,T,S2,e[g+15],X,530742520);S2=p(S2,R,Q,T,e[g+2],Y,3299628645);T=n(T,S2,R,Q,e[g+0],Z,4096336452);Q=n(Q,T,S2,R,e[g+7],ab,1126891415);R=n(R,Q,T,S2,e[g+14],bb,2878612391);S2=n(S2,R,Q,T,e[g+5],cb,4237533241);T=n(T,S2,R,Q,e[g+12],Z,1700485571);Q=n(Q,T,S2,R,e[g+3],ab,2399980690);R=n(R,Q,T,S2,e[g+10],bb,4293915773);S2=n(S2,R,Q,T,e[g+1],cb,2240044497);T=n(T,S2,R,Q,e[g+8],Z,1873313359);Q=n(Q,T,S2,R,e[g+15],ab,4264355552);R=n(R,Q,T,S2,e[g+6],bb,2734768916);S2=n(S2,R,Q,T,e[g+13],cb,1309151649);T=n(T,S2,R,Q,e[g+4],Z,4149444226);Q=n(Q,T,S2,R,e[g+11],ab,3174756917);R=n(R,Q,T,S2,e[g+2],bb,718787259);S2=n(S2,R,Q,T,e[g+9],cb,3951481745);T=K(T,f);S2=K(S2,V);R=K(R,U);Q=K(Q,t)}var h=m(T)+m(S2)+m(R)+m(Q);return h.toLowerCase()}function m(d){var k="",F="",G,H;for(G=0;G<=3;G++){H=(d>>>(G*8))&255;F="0"+H.toString(16);k+=F.substr(F.length-2,2)}return k}
 
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+
+function tokenScaduto(){
+  localStorage.removeItem('vfc_creds');
+  S.token=null;
+  document.getElementById('s-login').style.display='';
+  document.getElementById('bottomNav').style.display='none';
+  showScreen('s-login');
+  toast('Token Qobuz scaduto — inserisci un nuovo token');
+}
 function navTo(s,n){showScreen(s);document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));document.getElementById(n).classList.add('active');}
 
 function setDir(d){
@@ -1028,6 +1042,7 @@ async function saveToQobuz(){
       body:new URLSearchParams({name:pl.titolo,description,is_public:0,app_id:S.appId})
     });
     const createData=await createRes.json();
+    if(createData.code===401||createData.status==='error'&&createData.code===401){tokenScaduto();return;}
     if(!createData.id){throw new Error('Playlist non creata')}
     const playlistId=createData.id;
     entry.qobuzId=playlistId;
