@@ -610,6 +610,7 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
       <div class="stat"><div class="n" id="stT">0</div><div class="l">[Tratto]</div></div>
       <div class="stat"><div class="n" id="stR">0</div><div class="l">[Riflesso]</div></div>
       <div class="stat"><div class="n" id="stL">0</div><div class="l">Apprezzati</div></div>
+      <div class="stat"><div class="n" id="stD">0</div><div class="l">Scartati</div></div>
     </div>
     <div class="serie-div"></div>
     <div id="serieList"><div class="empty">Nessun rilievo ancora.<br>Genera il primo.</div></div>
@@ -1074,6 +1075,7 @@ function renderSerie(){
   document.getElementById('stT').textContent=S.history.filter(h=>h.dir==='tratto').length;
   document.getElementById('stR').textContent=S.history.filter(h=>h.dir==='riflesso').length;
   document.getElementById('stL').textContent=S.history.filter(h=>h.like===true).length;
+  document.getElementById('stD').textContent=S.history.filter(h=>h.like===false).length;
   const list=document.getElementById('serieList');
   if(!S.history.length){list.innerHTML='<div class="empty">Nessun rilievo ancora.<br>Genera il primo.</div>';return}
   list.innerHTML=S.history.map((h,i)=>`
