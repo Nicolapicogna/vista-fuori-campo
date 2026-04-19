@@ -753,7 +753,7 @@ async function loadExistingPlaylists(){
         descrizione:'',
         brani:[],
         durata:meta.durata||'—',
-        dir: meta.dir || (p.name.includes('[Tratto]') || p.name.includes('[tratto]') ? 'tratto' : p.name.includes('[Riflesso]') || p.name.includes('[riflesso]') ? 'riflesso' : 'tratto'),
+        dir: p.name.includes('[Riflesso]') || p.name.includes('[riflesso]') ? 'riflesso' : 'tratto',
         mezzo:meta.mezzo||'treno',
         energia:meta.energia||'media',
         luce:meta.luce||'parz',
