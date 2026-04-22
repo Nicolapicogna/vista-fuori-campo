@@ -969,7 +969,7 @@ Rispondi SOLO con JSON valido, nessun testo prima o dopo:
 {"titolo":"Vista fuori campo // Rilievo ${num} ${tag}","sottotitolo":"...","descrizione":"...","brani":[{"pos":1,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][0]}","motivazione":"..."},{"pos":2,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":3,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][2]}","motivazione":"..."},{"pos":4,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][3]}","motivazione":"..."}${S.bonusOn?',{"pos":5,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"Bonus","motivazione":"...","bonus":true}':''}],"durata_totale":"MM:SS"}`;
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
     const pl=JSON.parse(data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
     pl.brani.forEach(b=>{b.pinned=pinned.some(p=>b.titolo.toLowerCase().includes(p.titolo.toLowerCase()));});
@@ -1125,7 +1125,40 @@ function renderSerie(){
     </div>`).join('');
 }
 
-function toggleExp(i){document.getElementById('tr-'+i).classList.toggle('open');document.getElementById('exp-'+i).classList.toggle('open');}
+async function toggleExp(i){
+  const el=document.getElementById('tr-'+i);
+  const btn=document.getElementById('exp-'+i);
+  const isOpen=el.classList.contains('open');
+  el.classList.toggle('open');
+  btn.classList.toggle('open');
+
+  // Carica brani da Qobuz se mancano e stiamo aprendo
+  const h=S.history[i];
+  if(!isOpen && h.qobuzId && (!h.brani||h.brani.length===0)){
+    const tracksEl=el.querySelector('.ril-tracks-list');
+    if(tracksEl) tracksEl.innerHTML='<div style="padding:12px 0;font-size:11px;color:var(--text3)">Caricamento brani…</div>';
+    try{
+      const res=await fetch(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/get?playlist_id=${h.qobuzId}&extra=tracks&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
+      const data=await res.json();
+      if(data.tracks&&data.tracks.items){
+        h.brani=data.tracks.items.map((t,idx)=>({
+          pos:idx+1,
+          titolo:t.title,
+          artista:t.performer?t.performer.name:(t.album&&t.album.artist?t.album.artist.name:'—'),
+          album:t.album?t.album.title:'—',
+          durata:Math.floor(t.duration/60)+':'+(t.duration%60).toString().padStart(2,'0'),
+          paesaggio:'—',
+          motivazione:''
+        }));
+        saveState();
+        renderSerie();
+        // Riapri dopo render
+        document.getElementById('tr-'+i).classList.add('open');
+        document.getElementById('exp-'+i).classList.add('open');
+      }
+    }catch(e){console.log('Errore caricamento brani',e);}
+  }
+}
 function cycleLike(i){
   const h=S.history[i];
   h.like=h.like===null||h.like===undefined?true:h.like===true?false:null;
