@@ -555,6 +555,10 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
   </div>
 
   <div class="gen-wrap">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button id="btnFast" onclick="S.model='fast';document.getElementById('btnFast').style.background='var(--gold)';document.getElementById('btnFast').style.color='#000';document.getElementById('btnDeep').style.background='transparent';document.getElementById('btnDeep').style.color='var(--text2)'" style="flex:1;padding:10px 6px;border:1px solid var(--border);border-radius:8px;background:var(--gold);color:#000;font-size:10px;letter-spacing:.1em;cursor:pointer;font-family:inherit">VELOCE<br><span style="opacity:.6;font-size:9px">~0.01€</span></button>
+      <button id="btnDeep" onclick="S.model='deep';document.getElementById('btnDeep').style.background='var(--gold)';document.getElementById('btnDeep').style.color='#000';document.getElementById('btnFast').style.background='transparent';document.getElementById('btnFast').style.color='var(--text2)'" style="flex:1;padding:10px 6px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text2);font-size:10px;letter-spacing:.1em;cursor:pointer;font-family:inherit">PROFONDO<br><span style="opacity:.6;font-size:9px">~0.10€</span></button>
+    </div>
     <button class="btn" id="genBtn" onclick="generatePlaylist()">
       <div class="spinner" id="genSpinner"></div>
       <svg width="15" height="15" id="genIcon"><use href="#i-generate"/></svg>
@@ -609,10 +613,7 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
       <div class="stat"><div class="n" id="stTot">0</div><div class="l">Rilievi</div></div>
       <div class="stat"><div class="n" id="stT">0</div><div class="l">[Tratto]</div></div>
       <div class="stat"><div class="n" id="stR">0</div><div class="l">[Riflesso]</div></div>
-    </div>
-    <div class="stats-row" style="margin-top:12px">
       <div class="stat"><div class="n" id="stL">0</div><div class="l">Apprezzati</div></div>
-      <div class="stat"><div class="n" id="stD">0</div><div class="l">Scartati</div></div>
     </div>
     <div class="serie-div"></div>
     <div id="serieList"><div class="empty">Nessun rilievo ancora.<br>Genera il primo.</div></div>
@@ -651,7 +652,7 @@ const PAES={tratto:['Cime','Piloni','Capannoni','Città'],riflesso:['Città','Ca
 const DUR={treno:{l:'18–24 min',min:18,max:24},auto:{l:'~35 min',min:32,max:38}};
 const BONUS_CTX={tratto:'Strada dalla stazione al lavoro',riflesso:'Arrivo a casa ai piedi del bosco'};
 
-const S={dir:'tratto',mezzo:'treno',energia:'media',artisti:['Nirvana','CCCP Fedeli alla Linea','Nils Frahm','Leftfield'],tracce:[],bonusOn:false,luce:'parz',stagione:'primavera',weatherOn:false,nextNum:1,history:[],currentPl:null,token:null};
+const S={dir:'tratto',mezzo:'treno',energia:'media',artisti:['Nirvana','CCCP Fedeli alla Linea','Nils Frahm','Leftfield'],tracce:[],bonusOn:false,luce:'parz',stagione:'primavera',weatherOn:false,nextNum:1,history:[],currentPl:null,token:null,model:'fast'};
 
 function initCtx(){
   const h=new Date().getHours(),m=new Date().getMonth();
@@ -709,14 +710,14 @@ async function doLogin(){
     try{
       await Promise.race([
         loadExistingPlaylists(),
-        new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),8000))
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),20000))
       ]);
     }catch(e){
       try{const n=localStorage.getItem('vfc_n');if(n)S.nextNum=parseInt(n);}catch(e2){}
       updateNum();
     }
 
-    navTo('s-main','nav-g');
+    showScreen('s-main');
     window.scrollTo(0,0);
     toast('Benvenuto su Vista fuori campo');
 
@@ -728,9 +729,8 @@ async function doLogin(){
 
 async function loadExistingPlaylists(){
   try{
-    const res=await fetch(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/getUserPlaylists?limit=100&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
+    const res=await fetchWithTimeout(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/getUserPlaylists?limit=100&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
     const data=await res.json();
-    if(data.code===401||data.status==='error'){tokenScaduto();return;}
     if(!data.playlists||!data.playlists.items)return;
 
     // Filtra solo playlist "Vista fuori campo //"
@@ -805,10 +805,6 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 
   if(!creds||!creds.token||!creds.anthropicKey) return;
 
-  // Nascondi subito il login — mostra schermata di caricamento
-  document.getElementById('s-login').style.display='none';
-  document.getElementById('bottomNav').style.display='flex';
-
   try{
     S.token=creds.token;
     S.appId='798273057';
@@ -816,15 +812,17 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 
     try{const h=localStorage.getItem('vfc_h');if(h)S.history=JSON.parse(h);}catch(e){}
 
+    document.getElementById('bottomNav').style.display='flex';
     initCtx();renderArtisti();renderTracce();renderPaes();
 
     // Carica playlist con timeout — va avanti anche se fallisce
     try{
       await Promise.race([
         loadExistingPlaylists(),
-        new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000))
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),20000))
       ]);
     }catch(e){
+      console.log('loadExistingPlaylists timeout/errore:',e);
       try{const n=localStorage.getItem('vfc_n');if(n)S.nextNum=parseInt(n);}catch(e2){}
       updateNum();
     }
@@ -835,23 +833,18 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 
   }catch(e){
     console.log('Auto-login fallito',e);
-    document.getElementById('s-login').style.display='';
-    document.getElementById('bottomNav').style.display='none';
     showScreen('s-login');
   }
 });
 function md5(s){function L(k,d){return(k<<d)|(k>>>(32-d))}function K(G,k){var I,d,F,H,x;F=(G&2147483648);H=(k&2147483648);I=(G&1073741824);d=(k&1073741824);x=(G&1073741823)+(k&1073741823);if(I&d){return(x^2147483648^F^H)}if(I|d){if(x&1073741824){return(x^3221225472^F^H)}else{return(x^1073741824^F^H)}}else{return(x^F^H)}}function r(d,F,k,I,G,H,x){d=K(d,K(K((F&k)|(~F&I),G),x));return K(L(d,H),F)}function q(d,F,k,I,G,H,x){d=K(d,K(K((F&I)|(k&~I),G),x));return K(L(d,H),F)}function p(d,F,k,I,G,H,x){d=K(d,K(K(F^k^I,G),x));return K(L(d,H),F)}function n(d,F,k,I,G,H,x){d=K(d,K(K(k^(F|~I),G),x));return K(L(d,H),F)}function u(G){var F=G.length,k=1024;var d=new Array(Math.ceil((F+9)/64)*16);for(var H=0;H<d.length*4;H++){d[H>>2]|=0}for(var H=0;H<F;H++){d[H>>2]|=(G.charCodeAt(H)&255)<<((H%4)*8)}d[H>>2]|=128<<((H%4)*8);d[d.length-2]=F*8;return d}var e=Array();var g,f,V,U,T,S2,R,Q,P;var A=7,B=12,C=17,D=22;var E=5,J=9,M=14,N=20;var O=4,W=11,X=16,Y=23;var Z=6,ab=10,bb=15,cb=21;s=s.replace(/\r\n/g,"\n");var db="";for(var eb=0;eb<s.length;eb++){var fb=s.charCodeAt(eb);if(fb<128){db+=String.fromCharCode(fb)}else if((fb>127)&&(fb<2048)){db+=String.fromCharCode((fb>>6)|192);db+=String.fromCharCode((fb&63)|128)}else{db+=String.fromCharCode((fb>>12)|224);db+=String.fromCharCode(((fb>>6)&63)|128);db+=String.fromCharCode((fb&63)|128)}}s=db;e=u(s);T=1732584193;S2=4023233417;R=2562383102;Q=271733878;for(g=0;g<e.length;g+=16){f=T;V=S2;U=R;t=Q;T=r(T,S2,R,Q,e[g+0],A,3614090360);Q=r(Q,T,S2,R,e[g+1],B,3905402710);R=r(R,Q,T,S2,e[g+2],C,606105819);S2=r(S2,R,Q,T,e[g+3],D,3250441966);T=r(T,S2,R,Q,e[g+4],A,4118548399);Q=r(Q,T,S2,R,e[g+5],B,1200080426);R=r(R,Q,T,S2,e[g+6],C,2821735955);S2=r(S2,R,Q,T,e[g+7],D,4249261313);T=r(T,S2,R,Q,e[g+8],A,1770035416);Q=r(Q,T,S2,R,e[g+9],B,2336552879);R=r(R,Q,T,S2,e[g+10],C,4294925233);S2=r(S2,R,Q,T,e[g+11],D,2304563134);T=r(T,S2,R,Q,e[g+12],A,1804603682);Q=r(Q,T,S2,R,e[g+13],B,4254626195);R=r(R,Q,T,S2,e[g+14],C,2792965006);S2=r(S2,R,Q,T,e[g+15],D,1236535329);T=q(T,S2,R,Q,e[g+1],E,4129170786);Q=q(Q,T,S2,R,e[g+6],J,3225465664);R=q(R,Q,T,S2,e[g+11],M,643717713);S2=q(S2,R,Q,T,e[g+0],N,3921069994);T=q(T,S2,R,Q,e[g+5],E,3593408605);Q=q(Q,T,S2,R,e[g+10],J,38016083);R=q(R,Q,T,S2,e[g+15],M,3634488961);S2=q(S2,R,Q,T,e[g+4],N,3889429448);T=q(T,S2,R,Q,e[g+9],E,568446438);Q=q(Q,T,S2,R,e[g+14],J,3275163606);R=q(R,Q,T,S2,e[g+3],M,4107603335);S2=q(S2,R,Q,T,e[g+8],N,1163531501);T=q(T,S2,R,Q,e[g+13],E,2850285829);Q=q(Q,T,S2,R,e[g+2],J,4243563512);R=q(R,Q,T,S2,e[g+7],M,1735328473);S2=q(S2,R,Q,T,e[g+12],N,2368359562);T=p(T,S2,R,Q,e[g+5],O,4294588738);Q=p(Q,T,S2,R,e[g+8],W,2272392833);R=p(R,Q,T,S2,e[g+11],X,1839030562);S2=p(S2,R,Q,T,e[g+14],Y,4259657740);T=p(T,S2,R,Q,e[g+1],O,2763975236);Q=p(Q,T,S2,R,e[g+4],W,1272893353);R=p(R,Q,T,S2,e[g+7],X,4139469664);S2=p(S2,R,Q,T,e[g+10],Y,3200236656);T=p(T,S2,R,Q,e[g+13],O,681279174);Q=p(Q,T,S2,R,e[g+0],W,3936430074);R=p(R,Q,T,S2,e[g+3],X,3572445317);S2=p(S2,R,Q,T,e[g+6],Y,76029189);T=p(T,S2,R,Q,e[g+9],O,3654602809);Q=p(Q,T,S2,R,e[g+12],W,3873151461);R=p(R,Q,T,S2,e[g+15],X,530742520);S2=p(S2,R,Q,T,e[g+2],Y,3299628645);T=n(T,S2,R,Q,e[g+0],Z,4096336452);Q=n(Q,T,S2,R,e[g+7],ab,1126891415);R=n(R,Q,T,S2,e[g+14],bb,2878612391);S2=n(S2,R,Q,T,e[g+5],cb,4237533241);T=n(T,S2,R,Q,e[g+12],Z,1700485571);Q=n(Q,T,S2,R,e[g+3],ab,2399980690);R=n(R,Q,T,S2,e[g+10],bb,4293915773);S2=n(S2,R,Q,T,e[g+1],cb,2240044497);T=n(T,S2,R,Q,e[g+8],Z,1873313359);Q=n(Q,T,S2,R,e[g+15],ab,4264355552);R=n(R,Q,T,S2,e[g+6],bb,2734768916);S2=n(S2,R,Q,T,e[g+13],cb,1309151649);T=n(T,S2,R,Q,e[g+4],Z,4149444226);Q=n(Q,T,S2,R,e[g+11],ab,3174756917);R=n(R,Q,T,S2,e[g+2],bb,718787259);S2=n(S2,R,Q,T,e[g+9],cb,3951481745);T=K(T,f);S2=K(S2,V);R=K(R,U);Q=K(Q,t)}var h=m(T)+m(S2)+m(R)+m(Q);return h.toLowerCase()}function m(d){var k="",F="",G,H;for(G=0;G<=3;G++){H=(d>>>(G*8))&255;F="0"+H.toString(16);k+=F.substr(F.length-2,2)}return k}
 
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
 
-function tokenScaduto(){
-  localStorage.removeItem('vfc_creds');
-  S.token=null;
-  document.getElementById('s-login').style.display='';
-  document.getElementById('bottomNav').style.display='none';
-  showScreen('s-login');
-  toast('Token Qobuz scaduto — inserisci un nuovo token');
+function fetchWithTimeout(url, options={}, ms=20000){
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(),ms);
+  return fetch(url,{...options,signal:ctrl.signal}).finally(()=>clearTimeout(timer));
 }
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
 function navTo(s,n){showScreen(s);document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));document.getElementById(n).classList.add('active');}
 
 function setDir(d){
@@ -952,11 +945,15 @@ async function generatePlaylist(){
 
 RILIEVO: "Vista fuori campo // Rilievo ${num} ${tag}"
 Direzione: ${S.dir==='tratto'?'ANDATA (casa → città)':'RITORNO (città → casa)'} — paesaggi in sequenza: ${prog}
-Mezzo: ${S.mezzo} — durata TASSATIVA: ${dur.min}–${dur.max} minuti totali${S.bonusOn?` + bonus track finale (${BONUS_CTX[S.dir]})`:''}
+Mezzo: ${S.mezzo} — durata TARGET: ${dur.min}–${dur.max} minuti totali${S.bonusOn?` + bonus track finale (${BONUS_CTX[S.dir]})`:''}
+IMPORTANTE sulla durata: usa quanti brani servono per RIEMPIRE il tempo disponibile. Preferisci 5-7 brani che coprono bene la durata piuttosto che 4 brani corti che lasciano silenzio. Ogni brano dura tipicamente 3-6 minuti. La bonus track è ESCLUSA dal conteggio della durata — è un extra che può eccedere il minutaggio.
 Stagione: ${S.stagione} — Atmosfera luminosa: ${lMood} — Energia: ${eMood}${varDesc?'\nNote del giorno: '+varDesc:''}
 
 PAESAGGIO ATTRAVERSATO:
 Prealpi Giulie pedemontane → pianura del nord-est italiano → periferia urbana. Cime innevate, piloni dell'alta tensione arrugginiti, capannoni industriali enormi o in abbandono, lati B delle case, graffiti, ${S.dir==='tratto'?'stazione multiculturale e mercato':'bosco e silenzio pre-alpino'}.
+
+SEQUENZA PAESAGGI — REGOLA ASSOLUTA:
+La progressione ${prog} è INVIOLABILE. I brani devono seguire questa sequenza nell'ordine esatto. Un paesaggio può avere più brani (es. due brani su Piloni), ma non si può mai tornare indietro nella sequenza. La sequenza è il filo narrativo del rilievo.
 
 CAMPO SONORO DI RIFERIMENTO (non una lista da seguire — un orizzonte da esplorare):
 ${artisti.map((a,i)=>`${i+1}. ${a}`).join('\n')}
@@ -966,10 +963,10 @@ ${fb?'\nFEEDBACK SUI RILIEVI PRECEDENTI (tienine conto per variare):\n'+fb:''}
 SOTTOTITOLO: una frase breve in stile "found narrative" — come se fosse un graffito, un cartello o una scritta trovata lungo il tragitto. Qualcosa di specifico, non generico.
 
 Rispondi SOLO con JSON valido, nessun testo prima o dopo:
-{"titolo":"Vista fuori campo // Rilievo ${num} ${tag}","sottotitolo":"...","descrizione":"...","brani":[{"pos":1,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][0]}","motivazione":"..."},{"pos":2,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":3,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][2]}","motivazione":"..."},{"pos":4,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][3]}","motivazione":"..."}${S.bonusOn?',{"pos":5,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"Bonus","motivazione":"...","bonus":true}':''}],"durata_totale":"MM:SS"}`;
+{"titolo":"Vista fuori campo // Rilievo ${num} ${tag}","sottotitolo":"...","descrizione":"...","brani":[{"pos":1,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][0]}","motivazione":"..."},{"pos":2,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":3,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":4,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][2]}","motivazione":"..."},{"pos":5,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][3]}","motivazione":"..."}${S.bonusOn?',{"pos":6,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"Bonus","motivazione":"...","bonus":true}':''}],"durata_totale":"MM:SS"}`;
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:S.model==='deep'?'claude-sonnet-4-20250514':'claude-haiku-4-5-20251001',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
     const pl=JSON.parse(data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
     pl.brani.forEach(b=>{b.pinned=pinned.some(p=>b.titolo.toLowerCase().includes(p.titolo.toLowerCase()));});
@@ -1012,7 +1009,7 @@ function renderResult(pl){
     el.innerHTML=`<div class="sdot s-wait"></div>Verifica Qobuz…`;
     try{
       const q=encodeURIComponent(`${b.artista} ${b.titolo}`);
-      const res=await fetch(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/catalog/search?query=${q}&limit=5&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
+      const res=await fetchWithTimeout(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/catalog/search?query=${q}&limit=5&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
       const data=await res.json();
       const found=data.tracks&&data.tracks.items&&data.tracks.items.length>0;
       if(found){
@@ -1039,13 +1036,12 @@ async function saveToQobuz(){
     const description=`${pl.sottotitolo}\n\n${pl.descrizione}\n\n#vfc:${meta}`;
 
     // 1. Crea playlist su Qobuz
-    const createRes=await fetch(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/create`,{
+    const createRes=await fetchWithTimeout(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/create`,{
       method:'POST',
       headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
       body:new URLSearchParams({name:pl.titolo,description,is_public:0,app_id:S.appId})
     });
     const createData=await createRes.json();
-    if(createData.code===401||createData.status==='error'&&createData.code===401){tokenScaduto();return;}
     if(!createData.id){throw new Error('Playlist non creata')}
     const playlistId=createData.id;
     entry.qobuzId=playlistId;
@@ -1053,7 +1049,7 @@ async function saveToQobuz(){
     // 2. Aggiungi tracce
     const trackIds=pl.brani.filter(b=>b.qobuzId).map(b=>b.qobuzId);
     if(trackIds.length>0){
-      await fetch(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/addTracks`,{
+      await fetchWithTimeout(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/addTracks`,{
         method:'POST',
         headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
         body:new URLSearchParams({playlist_id:playlistId,track_ids:trackIds.join(','),app_id:S.appId})
@@ -1077,7 +1073,6 @@ function renderSerie(){
   document.getElementById('stT').textContent=S.history.filter(h=>h.dir==='tratto').length;
   document.getElementById('stR').textContent=S.history.filter(h=>h.dir==='riflesso').length;
   document.getElementById('stL').textContent=S.history.filter(h=>h.like===true).length;
-  document.getElementById('stD').textContent=S.history.filter(h=>h.like===false).length;
   const list=document.getElementById('serieList');
   if(!S.history.length){list.innerHTML='<div class="empty">Nessun rilievo ancora.<br>Genera il primo.</div>';return}
   list.innerHTML=S.history.map((h,i)=>`
@@ -1125,40 +1120,7 @@ function renderSerie(){
     </div>`).join('');
 }
 
-async function toggleExp(i){
-  const el=document.getElementById('tr-'+i);
-  const btn=document.getElementById('exp-'+i);
-  const isOpen=el.classList.contains('open');
-  el.classList.toggle('open');
-  btn.classList.toggle('open');
-
-  // Carica brani da Qobuz se mancano e stiamo aprendo
-  const h=S.history[i];
-  if(!isOpen && h.qobuzId && (!h.brani||h.brani.length===0)){
-    const tracksEl=el.querySelector('.ril-tracks-list');
-    if(tracksEl) tracksEl.innerHTML='<div style="padding:12px 0;font-size:11px;color:var(--text3)">Caricamento brani…</div>';
-    try{
-      const res=await fetch(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/get?playlist_id=${h.qobuzId}&extra=tracks&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
-      const data=await res.json();
-      if(data.tracks&&data.tracks.items){
-        h.brani=data.tracks.items.map((t,idx)=>({
-          pos:idx+1,
-          titolo:t.title,
-          artista:t.performer?t.performer.name:(t.album&&t.album.artist?t.album.artist.name:'—'),
-          album:t.album?t.album.title:'—',
-          durata:Math.floor(t.duration/60)+':'+(t.duration%60).toString().padStart(2,'0'),
-          paesaggio:'—',
-          motivazione:''
-        }));
-        saveState();
-        renderSerie();
-        // Riapri dopo render
-        document.getElementById('tr-'+i).classList.add('open');
-        document.getElementById('exp-'+i).classList.add('open');
-      }
-    }catch(e){console.log('Errore caricamento brani',e);}
-  }
-}
+function toggleExp(i){document.getElementById('tr-'+i).classList.toggle('open');document.getElementById('exp-'+i).classList.toggle('open');}
 function cycleLike(i){
   const h=S.history[i];
   h.like=h.like===null||h.like===undefined?true:h.like===true?false:null;
@@ -1178,7 +1140,7 @@ async function syncMetaToQobuz(h){
   try{
     const meta=JSON.stringify({num:h.num,dir:h.dir,mezzo:h.mezzo,energia:h.energia,luce:h.luce,stagione:h.stagione,durata:h.durata,like:h.like,note:h.note,data:h.data});
     const desc=`${h.sottotitolo||''}\n\n${h.descrizione||''}\n\n#vfc:${meta}`;
-    await fetch(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/update`,{
+    await fetchWithTimeout(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/update`,{
       method:'POST',
       headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
       body:new URLSearchParams({playlist_id:h.qobuzId,description:desc,app_id:S.appId})
@@ -1193,7 +1155,7 @@ async function deleteRilievo(i){
   // Elimina su Qobuz se abbiamo l'ID
   if(h.qobuzId&&S.token){
     try{
-      await fetch(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/delete`,{
+      await fetchWithTimeout(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/playlist/delete`,{
         method:'POST',
         headers:{'Content-Type':'application/x-www-form-urlencoded','X-User-Auth-Token':S.token},
         body:new URLSearchParams({playlist_id:h.qobuzId,app_id:S.appId})
