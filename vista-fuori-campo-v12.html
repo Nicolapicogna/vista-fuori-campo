@@ -344,7 +344,7 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
 </svg>
 
 <!-- LOGIN -->
-<div id="s-login" class="screen active">
+<div id="s-login" class="screen active" style="display:none">
   <div class="login-series">Generatore di serie</div>
   <div class="login-title">Vista<br><em>fuori campo</em></div>
   <div class="login-sub">Rilievi sonori del paesaggio</div>
@@ -366,6 +366,10 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
   </div>
   <div class="login-actions">
     <button class="btn filled" onclick="doLogin()">Entra</button>
+  </div>
+  <div id="tokenHint" style="display:none;margin:0 0 20px;padding:14px 16px;border:1px solid var(--gold);border-radius:8px;font-size:11px;line-height:1.6;color:var(--text2)">
+    <div style="color:var(--gold);letter-spacing:.1em;font-size:10px;margin-bottom:6px">COME OTTENERE UN NUOVO TOKEN</div>
+    Vai su <strong>play.qobuz.com</strong>, apri i DevTools (F12), clicca su <strong>Network</strong>. Clicca su un album qualsiasi. Cerca una riga che inizia con <strong>api.json</strong>, cliccaci sopra e cerca <strong>X-User-Auth-Token</strong> negli headers. Copia quel valore e incollalo qui sopra.
   </div>
   <p class="login-note">Credenziali salvate localmente sul dispositivo.</p>
 </div>
@@ -797,6 +801,13 @@ async function loadExistingPlaylists(){
 
 // AUTO-LOGIN all'avvio
 window.addEventListener('DOMContentLoaded', async ()=>{
+  // Mostra login subito se non ci sono credenziali
+  let _creds=null;
+  try{const _s=localStorage.getItem('vfc_creds');if(_s)_creds=JSON.parse(_s);}catch(e){}
+  if(!_creds||!_creds.token||!_creds.anthropicKey){
+    document.getElementById('s-login').style.display='';
+  }
+
   let creds=null;
   try{
     const saved=localStorage.getItem('vfc_creds');
