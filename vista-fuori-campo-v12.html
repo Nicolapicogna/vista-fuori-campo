@@ -1033,8 +1033,9 @@ function renderResult(pl){
       const match=items.find(t=>{
         const tArtista=normalize(t.performer?t.performer.name:(t.album&&t.album.artist?t.album.artist.name:''));
         const tTitolo=normalize(t.title||'');
-        const artistaOk=artistaN.length>4?tArtista.includes(artistaN.slice(0,6)):tArtista.includes(artistaN);
-        const titoloOk=titoloN.length>4?tTitolo.includes(titoloN.slice(0,8)):tTitolo.includes(titoloN);
+        // Controlla che almeno le prime 4 lettere di artista e titolo corrispondano
+        const artistaOk=tArtista.includes(artistaN.slice(0,4))||artistaN.includes(tArtista.slice(0,4));
+        const titoloOk=tTitolo.includes(titoloN.slice(0,5))||titoloN.includes(tTitolo.slice(0,5));
         return artistaOk&&titoloOk;
       });
       if(match){
