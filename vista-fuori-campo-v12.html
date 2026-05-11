@@ -856,6 +856,17 @@ function fetchWithTimeout(url, options={}, ms=20000){
   return fetch(url,{...options,signal:ctrl.signal}).finally(()=>clearTimeout(timer));
 }
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+
+function tokenScaduto(){
+  localStorage.removeItem('vfc_creds');
+  S.token=null;
+  document.getElementById('s-login').style.display='';
+  document.getElementById('bottomNav').style.display='none';
+  const hint=document.getElementById('tokenHint');
+  if(hint) hint.style.display='block';
+  showScreen('s-login');
+  toast('Token Qobuz scaduto — inserisci un nuovo token');
+}
 function navTo(s,n){showScreen(s);document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));document.getElementById(n).classList.add('active');}
 
 function setDir(d){
@@ -1026,6 +1037,7 @@ function renderResult(pl){
       const q=encodeURIComponent(`${b.artista} ${b.titolo}`);
       const res=await fetchWithTimeout(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/catalog/search?query=${q}&limit=5&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
       const data=await res.json();
+      if(data.code===401||data.status==='error'){tokenScaduto();return;}
       const items=data.tracks&&data.tracks.items||[];
       const normalize=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
       const artistaN=normalize(b.artista);
