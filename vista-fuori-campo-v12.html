@@ -968,7 +968,11 @@ La progressione ${prog} è INVIOLABILE. I brani devono seguire questa sequenza n
 
 CAMPO SONORO DI RIFERIMENTO (non una lista da seguire — un orizzonte da esplorare):
 ${artisti.map((a,i)=>`${i+1}. ${a}`).join('\n')}
-Questi artisti definiscono la zona timbrica e emotiva del rilievo. Usali come bussola, non come confine. Puoi scegliere brani di questi artisti MA SOPRATTUTTO cerca artisti affini, meno noti, che abitano lo stesso spazio sonoro: stessa tensione, stesso timbro, stessa densità. La scoperta è il valore principale. Evita i brani più ovvi e commerciali. Privilegia lati B, album meno conosciuti, artisti di confine tra generi. Evita tassativamente artisti con posizioni ideologiche estreme, razziste o neonaziste (es. Burzum/Varg Vikernes e simili) — anche se musicalmente affini.${pinned.length?'\n\nBRANI VINCOLATI (devono essere inclusi):\n'+pinned.map(t=>`"${t.titolo}" di ${t.artista}`).join('\n'):''}
+Questi artisti definiscono la zona timbrica e emotiva del rilievo. Usali come bussola, non come confine. Puoi scegliere brani di questi artisti MA SOPRATTUTTO cerca artisti affini, meno noti, che abitano lo stesso spazio sonoro: stessa tensione, stesso timbro, stessa densità. La scoperta è il valore principale. Evita i brani più ovvi e commerciali. Privilegia lati B, album meno conosciuti, artisti di confine tra generi. Evita tassativamente artisti con posizioni ideologiche estreme, razziste o neonaziste (es. Burzum/Varg Vikernes e simili) — anche se musicalmente affini.
+Evita brani puramente ambient/drone senza elementi ritmici o tensione — il rilievo deve avere corpo e direzione, non solo atmosfera. Cerca sempre un elemento che muova, che graffi, che pesi.
+Evita brani oltre i 7 minuti salvo eccezioni fortemente motivate dal paesaggio.
+Preferisci sempre la versione studio originale o remastered — evita versioni live, demo, bootleg, acustiche o registrazioni di qualità inferiore. Se un brano esiste in più versioni, scegli quella di studio o remastered.
+Il tono del rilievo deve emergere da meteo, stagione ed energia indicati — non da default "cupi" o "malinconici". Rimani sempre nell'orbita stilistica degli intorni indicati.${pinned.length?'\n\nBRANI VINCOLATI (devono essere inclusi):\n'+pinned.map(t=>`"${t.titolo}" di ${t.artista}`).join('\n'):''}
 ${fb?'\nFEEDBACK SUI RILIEVI PRECEDENTI (tienine conto per variare):\n'+fb:''}
 
 SOTTOTITOLO: una frase breve in stile "found narrative" — come se fosse un graffito, un cartello o una scritta trovata lungo il tragitto. Qualcosa di specifico, non generico.
@@ -1022,9 +1026,19 @@ function renderResult(pl){
       const q=encodeURIComponent(`${b.artista} ${b.titolo}`);
       const res=await fetchWithTimeout(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/catalog/search?query=${q}&limit=5&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}});
       const data=await res.json();
-      const found=data.tracks&&data.tracks.items&&data.tracks.items.length>0;
-      if(found){
-        b.qobuzId=data.tracks.items[0].id;
+      const items=data.tracks&&data.tracks.items||[];
+      const normalize=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
+      const artistaN=normalize(b.artista);
+      const titoloN=normalize(b.titolo);
+      const match=items.find(t=>{
+        const tArtista=normalize(t.performer?t.performer.name:(t.album&&t.album.artist?t.album.artist.name:''));
+        const tTitolo=normalize(t.title||'');
+        const artistaOk=artistaN.length>4?tArtista.includes(artistaN.slice(0,6)):tArtista.includes(artistaN);
+        const titoloOk=titoloN.length>4?tTitolo.includes(titoloN.slice(0,8)):tTitolo.includes(titoloN);
+        return artistaOk&&titoloOk;
+      });
+      if(match){
+        b.qobuzId=match.id;
         el.innerHTML=`<div class="sdot s-ok"></div>Disponibile su Qobuz`;
       } else {
         el.innerHTML=`<div class="sdot s-no"></div>Non trovato — alternativa in coda`;
