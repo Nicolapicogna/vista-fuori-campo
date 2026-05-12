@@ -709,6 +709,7 @@ async function doLogin(){
     try{const h=localStorage.getItem('vfc_h');if(h)S.history=JSON.parse(h);}catch(e){}
 
     document.getElementById('bottomNav').style.display='flex';
+    navTo('s-main','nav-g');
     initCtx();renderArtisti();renderTracce();renderPaes();
 
     try{
@@ -824,6 +825,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     try{const h=localStorage.getItem('vfc_h');if(h)S.history=JSON.parse(h);}catch(e){}
 
     document.getElementById('bottomNav').style.display='flex';
+    navTo('s-main','nav-g');
     initCtx();renderArtisti();renderTracce();renderPaes();
 
     // Carica playlist con timeout — va avanti anche se fallisce
@@ -960,7 +962,8 @@ async function generatePlaylist(){
   const lMood={sole:'Energico, luminoso, aperto',parz:'Morbido, sospeso, ambivalente',cop:'Introspettivo, denso, rallentato',not:'Acido, industriale, scuro — techno, post-industrial'}[S.luce];
   const eMood={bassa:'Energia bassa, contemplativo, ritmo contenuto',media:'Equilibrio tra riflessione e movimento',alta:'Ritmo sostenuto, dinamico'}[S.energia];
   const pinned=S.tracce.filter(t=>t.artista&&t.titolo);
-  const fb=S.history.slice(0,5).map(h=>`#${h.num}: ${h.like===true?'👍':h.like===false?'👎':'—'}${h.note?' ('+h.note+')':''} [${h.brani.map(b=>b.artista).join(', ')}]`).join('\n');
+  const recentBrani=S.history.slice(0,8).flatMap(h=>h.brani||[]).map(b=>`"${b.titolo}" di ${b.artista}`);
+  const fb=S.history.slice(0,5).map(h=>`#${h.num}: ${h.like===true?'👍':h.like===false?'👎':'—'}${h.note?' ('+h.note+')':''} [${h.brani.map(b=>b.artista+' - '+b.titolo).join(', ')}]`).join('\n');
   const varDesc=document.getElementById('varDesc').value.trim();
 
   const prompt=`Sei un curatore musicale con sensibilità documentaristica. Il progetto "Vista fuori campo" è un rilievo sonoro del paesaggio percorribile, ispirato all'estetica fotografica di Richard Misrach: attenzione al dettaglio ordinario, alla bellezza involontaria, alla tensione tra natura e industria.
@@ -984,7 +987,8 @@ Evita brani puramente ambient/drone senza elementi ritmici o tensione — il ril
 Evita brani oltre i 7 minuti salvo eccezioni fortemente motivate dal paesaggio.
 Preferisci sempre la versione studio originale o remastered — evita versioni live, demo, bootleg, acustiche o registrazioni di qualità inferiore. Se un brano esiste in più versioni, scegli quella di studio o remastered.
 Il tono del rilievo deve emergere da meteo, stagione ed energia indicati — non da default "cupi" o "malinconici". Rimani sempre nell'orbita stilistica degli intorni indicati.${pinned.length?'\n\nBRANI VINCOLATI (devono essere inclusi):\n'+pinned.map(t=>`"${t.titolo}" di ${t.artista}`).join('\n'):''}
-${fb?'\nFEEDBACK SUI RILIEVI PRECEDENTI (tienine conto per variare):\n'+fb:''}
+${recentBrani.length?'\nBRANI GIÀ USATI DI RECENTE (NON ripetere questi brani — né titolo né artista):\n'+recentBrani.slice(0,15).join('\n'):''}
+${fb?'\nFEEDBACK SUI RILIEVI PRECEDENTI:\n'+fb:''}
 
 SOTTOTITOLO: una frase breve in stile "found narrative" — come se fosse un graffito, un cartello o una scritta trovata lungo il tragitto. Qualcosa di specifico, non generico.
 
