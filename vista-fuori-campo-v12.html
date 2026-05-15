@@ -13,7 +13,7 @@ const iconSrc = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vc
 const manifest = {
   name: "Vista fuori campo",
   short_name: "VFC",
-  start_url: ".",
+  start_url: "./",
   display: "standalone",
   background_color: "#0e0d0b",
   theme_color: "#0e0d0b",
@@ -235,6 +235,11 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
 .s-ok{background:#6a9e7a}.s-no{background:#c06060}
 .s-wait{background:var(--gold);animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.track-actions{display:flex;align-items:center;gap:10px;margin-top:1px}
+.tac-btn{background:transparent;border:none;font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;padding:0;display:flex;align-items:center;gap:4px;transition:opacity 0.15s}
+.tac-btn:active{opacity:0.6}
+.tac-riprova{color:var(--text3)}
+.tac-rigenera{color:var(--gold)}
 
 /* DUR */
 .dur-block{margin:20px 0;padding:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
@@ -980,6 +985,126 @@ async function scegliBranoDaLista(contesto,brani,paesaggio,braniGiaUsati){
   return brani[0];
 }
 
+function normalize2(s){return s.toLowerCase().replace(/[^a-z0-9]/g,'');}
+
+async function cercaSuQobuz(artista,titolo){
+  const q=encodeURIComponent(artista+' '+titolo);
+  const res=await fetchWithTimeout(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/catalog/search?query=${q}&limit=8&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}},20000);
+  const data=await res.json();
+  if(data.code===401){tokenScaduto();return null;}
+  const items=data.tracks&&data.tracks.items||[];
+  const aN=normalize2(artista),tN=normalize2(titolo);
+  return items.find(t=>{
+    const tA=normalize2(t.performer?t.performer.name:(t.album&&t.album.artist?t.album.artist.name:''));
+    const tT=normalize2(t.title||'');
+    return (tA.includes(aN.slice(0,4))||aN.includes(tA.slice(0,4)))&&(tT.includes(tN.slice(0,5))||tN.includes(tT.slice(0,5)));
+  })||null;
+}
+
+// Funzione condivisa: aggiorna UI brano
+function updateTrackUI(pos,titolo,album,durata){
+  const el=document.getElementById('qs-'+pos);
+  if(!el)return;
+  const track=el.closest('.track');
+  if(!track)return;
+  if(titolo)track.querySelector('.track-name').textContent=titolo;
+  if(album)track.querySelector('.track-album').textContent=album;
+  if(durata)track.querySelector('.track-dur').textContent=durata;
+}
+
+// Mostra/nascondi il pulsante riprova in base allo stato
+function setRiprovaVisible(pos,visible){
+  const btn=document.getElementById('ta-riprova-'+pos);
+  if(btn)btn.style.display=visible?'flex':'none';
+}
+
+// RIPROVA — rilancia T1/T2/T3 sullo stesso brano
+async function riprova(pos){
+  if(!S.currentPl)return;
+  const b=S.currentPl.brani.find(x=>x.pos===pos);
+  if(!b)return;
+  const el=document.getElementById('qs-'+pos);
+  if(!el)return;
+  setRiprovaVisible(pos,false);
+  const braniGiaUsati=S.currentPl.brani.filter(x=>x.qobuzId&&x.pos!==pos);
+  try{
+    el.innerHTML='<div class="sdot s-wait"></div>T1 — verifica originale…';
+    let match=await cercaSuQobuz(b.artista,b.titolo);
+    if(match){b.qobuzId=match.id;el.innerHTML='<div class="sdot s-ok"></div>Disponibile su Qobuz';return;}
+
+    el.innerHTML='<div class="sdot s-wait"></div>T2 — alternativa…';
+    try{
+      const altRes=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:50,messages:[{role:'user',content:'Il brano "'+b.titolo+'" di '+b.artista+' non e disponibile. Suggerisci UN brano reale di '+b.artista+' adatto a: '+b.paesaggio+'. Rispondi SOLO col titolo.'}]})});
+      const altData=await altRes.json();
+      const altTitolo=altData.content[0].text.trim().replace(/[^a-zA-Z0-9\s\-',.!?àèéìòù]/g,'');
+      match=await cercaSuQobuz(b.artista,altTitolo);
+      if(match){b.titolo=altTitolo;b.qobuzId=match.id;updateTrackUI(pos,altTitolo,null,null);el.innerHTML='<div class="sdot s-ok"></div>Disponibile su Qobuz';return;}
+    }catch(e2){}
+
+    el.innerHTML='<div class="sdot s-wait"></div>T3 — ricerca avanzata…';
+    try{
+      const ctx=await getArtistContext(b.artista);
+      if(ctx&&ctx.topBrani.length>0){
+        const escludi=braniGiaUsati.map(x=>x.titolo);
+        const disponibili=ctx.topBrani.filter(t=>!escludi.includes(t.titolo));
+        const contesto=b.artista+(ctx.bio?' — '+ctx.bio.slice(0,200):'')+(ctx.simili.length?' — Simili: '+ctx.simili.join(', '):'')+(ctx.playlistInfo?' — Playlist editoriali: '+ctx.playlistInfo:'');
+        const scelto=await scegliBranoDaLista(contesto,disponibili,b.paesaggio,braniGiaUsati);
+        if(scelto&&scelto.id){b.titolo=scelto.titolo;b.album=scelto.album;b.durata=scelto.durata;b.qobuzId=scelto.id;updateTrackUI(pos,scelto.titolo,scelto.album,scelto.durata);el.innerHTML='<div class="sdot s-ok"></div>Disponibile su Qobuz';return;}
+      }
+    }catch(e3){}
+
+    el.innerHTML='<div class="sdot s-no"></div>Non trovato';
+    setRiprovaVisible(pos,true);
+  }catch(e){el.innerHTML='<div class="sdot s-no"></div>Errore';setRiprovaVisible(pos,true);}
+}
+
+// RIGENERA — chiede a Claude un brano diverso per lo stesso paesaggio, poi verifica
+async function rigenera(pos){
+  if(!S.currentPl)return;
+  const b=S.currentPl.brani.find(x=>x.pos===pos);
+  if(!b)return;
+  const el=document.getElementById('qs-'+pos);
+  if(!el)return;
+  setRiprovaVisible(pos,false);
+  const braniGiaUsati=S.currentPl.brani.filter(x=>x.qobuzId&&x.pos!==pos);
+  const escludi=[b.titolo,...braniGiaUsati.map(x=>x.titolo)].map(t=>'"'+t+'"').join(', ');
+
+  try{
+    el.innerHTML='<div class="sdot s-wait"></div>Nuovo suggerimento…';
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:80,messages:[{role:'user',content:'Sei un curatore musicale. Per il paesaggio "'+b.paesaggio+'" e il campo sonoro degli intorni ['+S.artisti.join(', ')+'], suggerisci UN brano diverso da: '+escludi+'. Stesso artista ("'+b.artista+'") o artista affine. Rispondi SOLO con JSON: {"artista":"...","titolo":"..."}'}]})});
+    const data=await res.json();
+    const suggestion=JSON.parse(data.content[0].text.trim().replace(/```json|```/g,''));
+    const newArtista=suggestion.artista||b.artista;
+    const newTitolo=suggestion.titolo;
+    if(!newTitolo)throw new Error('no title');
+
+    // Aggiorna il brano nell'oggetto e nell'UI
+    b.artista=newArtista;b.titolo=newTitolo;b.qobuzId=null;
+    updateTrackUI(pos,newTitolo,'','');
+    el.closest('.track').querySelector('.track-artist').textContent=newArtista;
+
+    // Ora verifica T1/T2/T3 sul nuovo brano
+    el.innerHTML='<div class="sdot s-wait"></div>T1 — verifica…';
+    let match=await cercaSuQobuz(newArtista,newTitolo);
+    if(match){b.qobuzId=match.id;updateTrackUI(pos,match.title||newTitolo,match.album?match.album.title:'',match.duration?Math.floor(match.duration/60)+':'+String(match.duration%60).padStart(2,'0'):'');el.innerHTML='<div class="sdot s-ok"></div>Disponibile su Qobuz';return;}
+
+    el.innerHTML='<div class="sdot s-wait"></div>T3 — ricerca avanzata…';
+    try{
+      const ctx=await getArtistContext(newArtista);
+      if(ctx&&ctx.topBrani.length>0){
+        const escludiT3=S.currentPl.brani.filter(x=>x.qobuzId&&x.pos!==pos).map(x=>x.titolo);
+        const disponibili=ctx.topBrani.filter(t=>!escludiT3.includes(t.titolo)&&t.titolo!==newTitolo);
+        const contesto=newArtista+(ctx.bio?' — '+ctx.bio.slice(0,200):'')+(ctx.simili.length?' — Simili: '+ctx.simili.join(', '):'');
+        const scelto=await scegliBranoDaLista(contesto,disponibili,b.paesaggio,S.currentPl.brani.filter(x=>x.qobuzId&&x.pos!==pos));
+        if(scelto&&scelto.id){b.titolo=scelto.titolo;b.album=scelto.album;b.durata=scelto.durata;b.qobuzId=scelto.id;updateTrackUI(pos,scelto.titolo,scelto.album,scelto.durata);el.innerHTML='<div class="sdot s-ok"></div>Disponibile su Qobuz';return;}
+      }
+    }catch(e3){}
+
+    el.innerHTML='<div class="sdot s-no"></div>Non trovato';
+    setRiprovaVisible(pos,true);
+  }catch(e){el.innerHTML='<div class="sdot s-no"></div>Errore';setRiprovaVisible(pos,true);}
+}
+
 async function generatePlaylist(){
   const artisti=S.artisti.filter(a=>a.trim());
   if(artisti.length<3){toast('Inserisci almeno 3 intorni');return}
@@ -1068,6 +1193,16 @@ async function renderResult(pl){
         <div class="track-status" id="qs-${b.pos}">
           <div class="sdot s-wait"></div>Verifica Qobuz…
         </div>
+        <div class="track-actions" id="ta-${b.pos}">
+          <button class="tac-btn tac-riprova" id="ta-riprova-${b.pos}" onclick="riprova(${b.pos})" style="display:none">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.17 2.45L3 8"/><path d="M3 3v5h5"/></svg>
+            riprova
+          </button>
+          <button class="tac-btn tac-rigenera" onclick="rigenera(${b.pos})">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20l16-16M21 16v5h-5M4 4l6 6M14 14l6 6"/></svg>
+            rigenera
+          </button>
+        </div>
       </div>
     </div>`).join('');
   const tot=pl.durata_totale||'—';
@@ -1076,49 +1211,27 @@ async function renderResult(pl){
   const max=DUR[S.mezzo].max;
   setTimeout(()=>{const b=document.getElementById('durBar');b.style.width=Math.min(mins/max*100,100)+'%';b.classList.toggle('over',mins>max+2);},100);
   const braniGiaUsati=[];
-  const normalize2=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
-
-  async function cercaSuQobuz(artista,titolo){
-    const q=encodeURIComponent(artista+' '+titolo);
-    const res=await fetchWithTimeout(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/catalog/search?query=${q}&limit=8&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}},20000);
-    const data=await res.json();
-    if(data.code===401){tokenScaduto();return null;}
-    const items=data.tracks&&data.tracks.items||[];
-    const aN=normalize2(artista),tN=normalize2(titolo);
-    return items.find(t=>{
-      const tA=normalize2(t.performer?t.performer.name:(t.album&&t.album.artist?t.album.artist.name:''));
-      const tT=normalize2(t.title||'');
-      return (tA.includes(aN.slice(0,4))||aN.includes(tA.slice(0,4)))&&(tT.includes(tN.slice(0,5))||tN.includes(tT.slice(0,5)));
-    })||null;
-  }
 
   async function verificaEFissa(b){
     const el=document.getElementById('qs-'+b.pos);if(!el)return;
-    const updateTrackUI=(titolo,album,durata)=>{
-      const track=el.closest('.track');
-      if(!track)return;
-      if(titolo)track.querySelector('.track-name').textContent=titolo;
-      if(album)track.querySelector('.track-album').textContent=album;
-      if(durata)track.querySelector('.track-dur').textContent=durata;
-    };
     try{
       // T1: brano originale
-      el.innerHTML='<div class="sdot s-wait"></div>Verifica…';
+      el.innerHTML='<div class="sdot s-wait"></div>T1 — verifica originale…';
       let match=await cercaSuQobuz(b.artista,b.titolo);
       if(match){b.qobuzId=match.id;braniGiaUsati.push(b);el.innerHTML='<div class="sdot s-ok"></div>Disponibile su Qobuz';return;}
 
       // T2: Claude suggerisce titolo alternativo stesso artista
-      el.innerHTML='<div class="sdot s-wait"></div>Alternativa…';
+      el.innerHTML='<div class="sdot s-wait"></div>T2 — alternativa…';
       try{
         const altRes=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:50,messages:[{role:'user',content:'Il brano "'+b.titolo+'" di '+b.artista+' non e disponibile. Suggerisci UN brano reale di '+b.artista+' adatto a: '+b.paesaggio+'. Rispondi SOLO col titolo.'}]})});
         const altData=await altRes.json();
         const altTitolo=altData.content[0].text.trim().replace(/[^a-zA-Z0-9\s\-',.!?àèéìòù]/g,'');
         match=await cercaSuQobuz(b.artista,altTitolo);
-        if(match){b.titolo=altTitolo;b.qobuzId=match.id;braniGiaUsati.push(b);updateTrackUI(altTitolo,null,null);el.innerHTML='<div class="sdot s-ok"></div>Disponibile su Qobuz';return;}
+        if(match){b.titolo=altTitolo;b.qobuzId=match.id;braniGiaUsati.push(b);updateTrackUI(b.pos,altTitolo,null,null);el.innerHTML='<div class="sdot s-ok"></div>Disponibile su Qobuz';return;}
       }catch(e2){}
 
       // T3: brani reali da Qobuz, Claude sceglie
-      el.innerHTML='<div class="sdot s-wait"></div>Ricerca avanzata…';
+      el.innerHTML='<div class="sdot s-wait"></div>T3 — ricerca avanzata…';
       try{
         const ctx=await getArtistContext(b.artista);
         if(ctx&&ctx.topBrani.length>0){
@@ -1126,12 +1239,13 @@ async function renderResult(pl){
           const disponibili=ctx.topBrani.filter(t=>!escludi.includes(t.titolo));
           const contesto=b.artista+(ctx.bio?' — '+ctx.bio.slice(0,200):'')+(ctx.simili.length?' — Simili: '+ctx.simili.join(', '):'')+(ctx.playlistInfo?' — Playlist editoriali: '+ctx.playlistInfo:'');
           const scelto=await scegliBranoDaLista(contesto,disponibili,b.paesaggio,braniGiaUsati);
-          if(scelto&&scelto.id){b.titolo=scelto.titolo;b.album=scelto.album;b.durata=scelto.durata;b.qobuzId=scelto.id;braniGiaUsati.push(b);updateTrackUI(scelto.titolo,scelto.album,scelto.durata);el.innerHTML='<div class="sdot s-ok"></div>Disponibile su Qobuz';return;}
+          if(scelto&&scelto.id){b.titolo=scelto.titolo;b.album=scelto.album;b.durata=scelto.durata;b.qobuzId=scelto.id;braniGiaUsati.push(b);updateTrackUI(b.pos,scelto.titolo,scelto.album,scelto.durata);el.innerHTML='<div class="sdot s-ok"></div>Disponibile su Qobuz';return;}
         }
       }catch(e3){}
 
-      el.innerHTML='<div class="sdot s-no"></div>Non disponibile su Qobuz';
-    }catch(e){el.innerHTML='<div class="sdot s-no"></div>Verifica non disponibile';}
+      el.innerHTML='<div class="sdot s-no"></div>Non trovato';
+      setRiprovaVisible(b.pos,true);
+    }catch(e){el.innerHTML='<div class="sdot s-no"></div>Errore';setRiprovaVisible(b.pos,true);}
   }
 
   await Promise.allSettled(pl.brani.map(b=>verificaEFissa(b)));
