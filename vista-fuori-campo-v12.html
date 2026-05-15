@@ -1048,7 +1048,7 @@ Rispondi SOLO con JSON valido, nessun testo prima o dopo:
   document.getElementById('genTxt').textContent='Genera rilievo';
 }
 
-function renderResult(pl){
+async function renderResult(pl){
   document.getElementById('rKicker').textContent=S.dir==='tratto'?'Andata · [Tratto]':'Ritorno · [Riflesso]';
   document.getElementById('rTitle').textContent=pl.titolo;
   document.getElementById('rSub').textContent=pl.sottotitolo;
