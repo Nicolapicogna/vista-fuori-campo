@@ -356,7 +356,7 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
 </svg>
 
 <!-- LOGIN -->
-<div id="s-login" class="screen active" style="display:none">
+<div id="s-login" class="screen active">
   <div class="login-series">Generatore di serie</div>
   <div class="login-title">Vista<br><em>fuori campo</em></div>
   <div class="login-sub">Rilievi sonori del paesaggio</div>
@@ -820,7 +820,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   let _creds=null;
   try{const _s=localStorage.getItem('vfc_creds');if(_s)_creds=JSON.parse(_s);}catch(e){}
   if(!_creds||!_creds.token||!_creds.anthropicKey){
-    document.getElementById('s-login').style.display='';
+    showScreen('s-login');
   }
 
   let creds=null;
