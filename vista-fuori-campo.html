@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0e0d0b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Vista fuori campo">
+<meta name="apple-mobile-web-app-title" content="Vista fuori campo <span class="app-version-inline">v16</span>">
 <link rel="manifest" id="pwa-manifest">
 <script>
 const iconSrc = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9Ijk2IiBmaWxsPSIjMGUwZDBiIi8+CiAgPHRleHQgeD0iMjU2IiB5PSIzMTAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjIwMCIgZm9udC1zdHlsZT0iaXRhbGljIiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjYjhhMjcyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5WRkM8L3RleHQ+CiAgPHRleHQgeD0iMjU2IiB5PSIzNzAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjQ4IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjNDY0MjNjIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBsZXR0ZXItc3BhY2luZz0iMTIiPlJJTElFVkk8L3RleHQ+Cjwvc3ZnPg==";
@@ -314,11 +314,22 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
 @keyframes up{from{transform:translateY(100%)}to{transform:none}}
 .sheet-handle{width:32px;height:3px;background:var(--border2);border-radius:2px;margin:0 auto 22px}
 .export-txt{background:var(--bg);padding:16px;font-size:11px;color:var(--text2);line-height:1.9;white-space:pre-wrap;word-break:break-word;max-height:260px;overflow-y:auto;margin-bottom:16px;border:1px solid var(--border)}
+
+.app-version-inline{
+  display:inline-block;
+  margin-left:7px;
+  font-size:.42em;
+  font-weight:500;
+  letter-spacing:.04em;
+  opacity:.55;
+  vertical-align:middle;
+}
+
 </style>
 </head>
 <body>
 
-<div class="interface-version">v16</div>
+
 
 <!-- SVG DEFS -->
 <svg style="display:none">
