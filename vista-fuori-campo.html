@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0e0d0b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Vista fuori campo <span class="app-version-inline">v16</span>">
+<meta name="apple-mobile-web-app-title" content="Vista fuori campo">
 <link rel="manifest" id="pwa-manifest">
 <script>
 const iconSrc = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9Ijk2IiBmaWxsPSIjMGUwZDBiIi8+CiAgPHRleHQgeD0iMjU2IiB5PSIzMTAiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjIwMCIgZm9udC1zdHlsZT0iaXRhbGljIiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjYjhhMjcyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5WRkM8L3RleHQ+CiAgPHRleHQgeD0iMjU2IiB5PSIzNzAiIGZvbnQtZmFtaWx5PSJBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjQ4IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjNDY0MjNjIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBsZXR0ZXItc3BhY2luZz0iMTIiPlJJTElFVkk8L3RleHQ+Cjwvc3ZnPg==";
@@ -298,7 +298,6 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
 
 /* NAV */
 .app-version{position:absolute;bottom:6px;right:10px;font-size:9px;letter-spacing:0.08em;color:var(--text3);opacity:0.45;pointer-events:none}
-.interface-version{position:fixed;top:10px;right:12px;z-index:200;font-size:9px;letter-spacing:0.08em;color:var(--text3);opacity:0.55;pointer-events:none;line-height:1}
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:rgba(14,13,11,0.96);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:10px 0 26px;z-index:100}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;color:var(--text2);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;padding:4px 0;font-weight:500;transition:color 0.15s}
 .nav-item.active{color:var(--gold)}
@@ -314,22 +313,9 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
 @keyframes up{from{transform:translateY(100%)}to{transform:none}}
 .sheet-handle{width:32px;height:3px;background:var(--border2);border-radius:2px;margin:0 auto 22px}
 .export-txt{background:var(--bg);padding:16px;font-size:11px;color:var(--text2);line-height:1.9;white-space:pre-wrap;word-break:break-word;max-height:260px;overflow-y:auto;margin-bottom:16px;border:1px solid var(--border)}
-
-.app-version-inline{
-  display:inline-block;
-  margin-left:7px;
-  font-size:.42em;
-  font-weight:500;
-  letter-spacing:.04em;
-  opacity:.55;
-  vertical-align:middle;
-}
-
 </style>
 </head>
 <body>
-
-
 
 <!-- SVG DEFS -->
 <svg style="display:none">
@@ -367,7 +353,7 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
 </svg>
 
 <!-- LOGIN -->
-<div id="s-login" class="screen active">
+<div id="s-login" class="screen active" style="display:none">
   <div class="login-series">Generatore di serie</div>
   <div class="login-title">Vista<br><em>fuori campo</em></div>
   <div class="login-sub">Rilievi sonori del paesaggio</div>
@@ -736,20 +722,18 @@ async function doLogin(){
     document.getElementById('bottomNav').style.display='flex';
     navTo('s-main','nav-g');
     initCtx();renderArtisti();renderTracce();renderPaes();
-
-    try{
-      await Promise.race([
-        loadExistingPlaylists(),
-        new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),20000))
-      ]);
-    }catch(e){
-      try{const n=localStorage.getItem('vfc_n');if(n)S.nextNum=parseInt(n);}catch(e2){}
-      updateNum();
-    }
-
     showScreen('s-main');
     window.scrollTo(0,0);
     toast('Benvenuto su Vista fuori campo');
+
+    // Carica playlist in background — non blocca il login
+    Promise.race([
+      loadExistingPlaylists(),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),20000))
+    ]).catch(e=>{
+      try{const n=localStorage.getItem('vfc_n');if(n)S.nextNum=parseInt(n);}catch(e2){}
+      updateNum();
+    });
 
   }catch(e){
     toast('Errore — riprova');
@@ -831,7 +815,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   let _creds=null;
   try{const _s=localStorage.getItem('vfc_creds');if(_s)_creds=JSON.parse(_s);}catch(e){}
   if(!_creds||!_creds.token||!_creds.anthropicKey){
-    showScreen('s-login');
+    document.getElementById('s-login').style.display='';
   }
 
   let creds=null;
