@@ -635,7 +635,7 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
 
 <!-- NAV -->
 <div class="bottom-nav" id="bottomNav" style="display:none">
-  <span class="app-version">v15</span>
+  <span class="app-version">v16</span>
   <div class="nav-item active" id="nav-g" onclick="navTo('s-main','nav-g')">
     <svg width="18" height="18"><use href="#i-generate"/></svg>
     Genera
@@ -1075,7 +1075,15 @@ async function riprova(pos){
   }catch(e){el.innerHTML='<div class="sdot s-no"></div>Errore';setRiprovaVisible(pos,true);}
 }
 
-// RIGENERA — chiede a Claude un brano diverso per lo stesso paesaggio, poi verifica
+function normalizeArtistName(name){
+  return (name||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+
+function getRecentArtistNames(){
+  return [...new Set(S.history.slice(0,8).flatMap(h=>h.brani||[]).map(b=>normalizeArtistName(b.artista)).filter(Boolean))];
+}
+
+// RIGENERA — propone un artista diverso, evitando anche gli artisti degli ultimi 8 rilievi
 async function rigenera(pos){
   if(!S.currentPl)return;
   const b=S.currentPl.brani.find(x=>x.pos===pos);
@@ -1084,18 +1092,33 @@ async function rigenera(pos){
   if(!el)return;
   setRiprovaVisible(pos,false);
   const braniGiaUsati=S.currentPl.brani.filter(x=>x.qobuzId&&x.pos!==pos);
+  const artistiPlaylist=S.currentPl.brani.filter(x=>x.pos!==pos).map(x=>normalizeArtistName(x.artista)).filter(Boolean);
+  const recentArtisti=getRecentArtistNames();
   const escludi=[b.titolo,...braniGiaUsati.map(x=>x.titolo)].map(t=>'"'+t+'"').join(', ');
+  const esclusiArtisti=[normalizeArtistName(b.artista),...artistiPlaylist,...recentArtisti];
 
   try{
-    el.innerHTML='<div class="sdot s-wait"></div>Nuovo suggerimento…';
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:80,messages:[{role:'user',content:'Sei un curatore musicale. Per il paesaggio "'+b.paesaggio+'" e il campo sonoro degli intorni ['+S.artisti.join(', ')+'], suggerisci UN brano di un ARTISTA DIVERSO da "'+b.artista+'" (affine, stesso territorio sonoro). Escludi questi brani: '+escludi+'. Rispondi SOLO con JSON: {"artista":"...","titolo":"..."}'}]})});
-    const data=await res.json();
-    const suggestion=JSON.parse(data.content[0].text.trim().replace(/```json|```/g,''));
-    const newArtista=suggestion.artista||b.artista;
-    const newTitolo=suggestion.titolo;
-    if(!newTitolo)throw new Error('no title');
+    let suggestion=null;
+    for(let tentativo=1;tentativo<=3;tentativo++){
+      el.innerHTML='<div class="sdot s-wait"></div>Nuovo suggerimento'+(tentativo>1?' — correzione…':'…');
+      const esclusiArtistiTesto=[...new Set(esclusiArtisti)].join(', ');
+      const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:100,messages:[{role:'user',content:'Sei un curatore musicale. Per il paesaggio "'+b.paesaggio+'" e il campo sonoro degli intorni ['+S.artisti.join(', ')+'], suggerisci UN brano di un artista affine, nello stesso territorio sonoro. L'artista DEVE essere diverso dall'artista corrente, da tutti gli artisti già presenti nella playlist e da tutti gli artisti usati negli ultimi 8 rilievi. NON scegliere nessuno di questi artisti: '+esclusiArtistiTesto+'. Escludi anche questi brani: '+escludi+'. La diversità dell'artista è una regola obbligatoria, non un suggerimento. Rispondi SOLO con JSON: {"artista":"...","titolo":"..."}'}]})});
+      const data=await res.json();
+      const text=data.content&&data.content.map(x=>x.text||'').join('').trim().replace(/```json|```/g,'');
+      if(!text)continue;
+      try{suggestion=JSON.parse(text);}catch(e){continue;}
+      const candidate=normalizeArtistName(suggestion.artista);
+      if(candidate&&suggestion.titolo&& !esclusiArtisti.includes(candidate)) break;
+      suggestion=null;
+      esclusiArtisti.push(candidate||'risposta non valida');
+    }
 
-    // Aggiorna il brano nell'oggetto e nell'UI
+    if(!suggestion||!suggestion.artista||!suggestion.titolo)throw new Error('nessun artista valido');
+    const newArtista=suggestion.artista.trim();
+    const newTitolo=suggestion.titolo.trim();
+    if(esclusiArtisti.includes(normalizeArtistName(newArtista)))throw new Error('artista escluso');
+
+    // Aggiorna il brano nell'oggetto e nell'UI solo dopo aver superato i controlli
     b.artista=newArtista;b.titolo=newTitolo;b.qobuzId=null;
     updateTrackUI(pos,newTitolo,'','');
     el.closest('.track').querySelector('.track-artist').textContent=newArtista;
@@ -1165,7 +1188,7 @@ async function generatePlaylist(){
   const eMood={bassa:'Energia bassa, contemplativo, ritmo contenuto',media:'Equilibrio tra riflessione e movimento',alta:'Ritmo sostenuto, dinamico'}[S.energia];
   const pinned=S.tracce.filter(t=>t.artista&&t.titolo);
   const recentBrani=S.history.slice(0,8).flatMap(h=>h.brani||[]).map(b=>`"${b.titolo}" di ${b.artista}`);
-  const recentArtisti=[...new Set(S.history.slice(0,8).flatMap(h=>h.brani||[]).map(b=>b.artista))].slice(0,20);
+  const recentArtisti=getRecentArtistNames().slice(0,20);
   const fb=S.history.slice(0,5).map(h=>`#${h.num}: ${h.like===true?'👍':h.like===false?'👎':'—'}${h.note?' ('+h.note+')':''} [${h.brani.map(b=>b.artista+' - '+b.titolo).join(', ')}]`).join('\n');
   const varDesc=document.getElementById('varDesc').value.trim();
 
@@ -1191,7 +1214,7 @@ Evita brani puramente ambient/drone senza elementi ritmici o tensione — il ril
 Evita brani oltre i 7 minuti salvo eccezioni fortemente motivate dal paesaggio.
 Preferisci sempre la versione studio originale o remastered — evita versioni live, demo, bootleg, acustiche o registrazioni di qualità inferiore. Se un brano esiste in più versioni, scegli quella di studio o remastered.
 Il tono del rilievo deve emergere da meteo, stagione ed energia indicati — non da default "cupi" o "malinconici". Rimani sempre nell'orbita stilistica degli intorni indicati.${pinned.length?'\n\nBRANI VINCOLATI (devono essere inclusi):\n'+pinned.map(t=>`"${t.titolo}" di ${t.artista}`).join('\n'):''}
-${recentBrani.length?'\nBRANI GIÀ USATI DI RECENTE (NON ripetere questi brani — né titolo né artista):\n'+recentBrani.slice(0,15).join('\n'):''}${recentArtisti.length?'\nARTISTI GIÀ USATI NEGLI ULTIMI 8 RILIEVI (evita questi artisti — cerca alternative nel loro campo sonoro):\n'+recentArtisti.join(', '):''}
+${recentBrani.length?'\nBRANI GIÀ USATI DI RECENTE (NON ripetere questi brani — né titolo né artista):\n'+recentBrani.slice(0,15).join('\n'):''}${recentArtisti.length?'\nARTISTI GIÀ USATI NEGLI ULTIMI 8 RILIEVI (REGOLA OBBLIGATORIA: NON usare questi artisti; cerca alternative nel loro campo sonoro):\n'+recentArtisti.join(', '):''}
 ${fb?'\nFEEDBACK SUI RILIEVI PRECEDENTI:\n'+fb:''}
 
 SOTTOTITOLO: una frase breve in stile "found narrative" — come se fosse un graffito, un cartello o una scritta trovata lungo il tragitto. Qualcosa di specifico, non generico.
@@ -1203,6 +1226,13 @@ Rispondi SOLO con JSON valido, nessun testo prima o dopo:
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:S.model==='deep'?'claude-sonnet-4-20250514':'claude-haiku-4-5-20251001',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
     const pl=JSON.parse(data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
+    const recentSet=new Set(recentArtisti.map(normalizeArtistName));
+    const artistiNelRilievo=pl.brani.map(b=>normalizeArtistName(b.artista)).filter(Boolean);
+    const duplicati=artistiNelRilievo.filter((a,i)=>artistiNelRilievo.indexOf(a)!==i);
+    const artistiRecentiViolati=artistiNelRilievo.filter(a=>recentSet.has(a));
+    if(duplicati.length||artistiRecentiViolati.length){
+      throw new Error('Regole anti-ripetizione violate');
+    }
     pl.brani.forEach(b=>{b.pinned=pinned.some(p=>b.titolo.toLowerCase().includes(p.titolo.toLowerCase()));});
     S.currentPl=pl;renderResult(pl);
   }catch(e){toast('Errore — riprova');showScreen('s-main');}
