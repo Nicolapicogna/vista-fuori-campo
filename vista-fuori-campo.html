@@ -1337,9 +1337,13 @@ Rispondi SOLO con JSON valido, nessun testo prima o dopo:
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:S.model==='deep'?'claude-sonnet-4-20250514':'claude-haiku-4-5-20251001',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
-    const pl=JSON.parse(data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
+    const rawJson=data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    console.log('RAW JSON:', rawJson.slice(0,500));
+    const pl=JSON.parse(rawJson);
     const recentSet=new Set(recentArtisti.map(normalizeArtistName));
     const poolFiltrato=poolBrani.filter(b=>!recentSet.has(normalizeArtistName(b.artista)));
+    console.log('POOL SIZE:', poolFiltrato.length);
+    console.log('BRANI pool_idx:', pl.brani.map(b=>b.pool_idx));
     pl.brani=pl.brani.map(b=>{
       if(b.pool_idx&&poolFiltrato[b.pool_idx-1]){
         const pb=poolFiltrato[b.pool_idx-1];
