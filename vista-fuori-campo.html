@@ -1150,7 +1150,7 @@ async function rigenera(pos){
 async function verificaIntorni(artisti){
   S.artistiStatus={};
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:200,messages:[{role:'user',content:'Per ciascuno di questi nomi, dimmi se e un artista musicale reale che conosci. Rispondi SOLO con JSON: {"risultati":[{"nome":"...","noto":true/false},...]}\n\nArtisti:\n'+artisti.map(a=>'- '+a).join('\n')}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:200,messages:[{role:'user',content:'Per ciascuno di questi nomi, dimmi se e un artista musicale reale che conosci. Rispondi SOLO con JSON: {"risultati":[{"nome":"...","noto":true/false},...]}\\n\\nArtisti:\\n'+artisti.map(a=>'- '+a).join('\\n')}]})});
     const data=await res.json();
     const json=JSON.parse(data.content[0].text.trim().replace(/```json|```/g,''));
     json.risultati.forEach(r=>{S.artistiStatus[r.nome.trim().toLowerCase()]=r.noto?'ok':'err';});
@@ -1164,20 +1164,57 @@ async function verificaIntorni(artisti){
   return new Promise(resolve=>{
     let artVerificati=[...artisti];
     let pending=[...rossi];
+
+    function buildSheet(nome){
+      const sheet=document.createElement('div');
+      sheet.className='sheet';
+      sheet.style.display='flex';
+      const inner=document.createElement('div');
+      inner.className='sheet-inner';
+      inner.style.cssText='padding:24px 20px 40px';
+      const label=document.createElement('div');
+      label.className='label';
+      label.style.marginBottom='8px';
+      label.textContent='Intorno non riconosciuto';
+      const title=document.createElement('div');
+      title.style.cssText='font-size:20px;margin-bottom:16px';
+      title.textContent=nome;
+      const desc=document.createElement('div');
+      desc.style.cssText='font-size:13px;color:var(--text3);margin-bottom:24px';
+      desc.textContent='Claude non conosce questo artista. Sostituiscilo o ignoralo.';
+      const input=document.createElement('input');
+      input.id='vi-input';
+      input.className='art-input';
+      input.style.cssText='width:100%;margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:14px;color:var(--text)';
+      input.placeholder='Sostituisci con...';
+      input.value=nome;
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;gap:10px';
+      const btnUsa=document.createElement('button');
+      btnUsa.className='btn';
+      btnUsa.style.cssText='flex:1;padding:12px 0';
+      btnUsa.textContent='Usa questo';
+      const btnIgnora=document.createElement('button');
+      btnIgnora.style.cssText='flex:0 0 auto;background:none;border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text3);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer';
+      btnIgnora.textContent='Ignora';
+      row.appendChild(btnUsa);row.appendChild(btnIgnora);
+      inner.appendChild(label);inner.appendChild(title);inner.appendChild(desc);inner.appendChild(input);inner.appendChild(row);
+      sheet.appendChild(inner);
+      return {sheet,input,btnUsa,btnIgnora};
+    }
+
     function processNext(){
       if(pending.length===0){resolve(artVerificati.filter(a=>a&&a.trim()));return;}
       const nome=pending.shift();
-      let idx=artVerificati.indexOf(nome);
-      const sheet=document.createElement('div');
-      sheet.className='sheet';sheet.style.display='flex';
-      sheet.innerHTML='<div class="sheet-inner" style="padding:24px 20px 40px"><div class="label" style="margin-bottom:8px">Intorno non riconosciuto</div><div style="font-family:'Playfair Display',serif;font-size:20px;margin-bottom:16px">'+nome+'</div><div style="font-size:13px;color:var(--text3);margin-bottom:24px">Claude non conosce questo artista. Sostituiscilo o ignoralo.</div><input id="vi-input" class="art-input" style="width:100%;margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:14px;color:var(--text);font-family:'DM Sans',sans-serif" placeholder="Sostituisci con…" value="'+nome+'"><div style="display:flex;gap:10px"><button id="vi-usa" class="btn" style="flex:1;padding:12px 0">Usa questo</button><button id="vi-ignora" style="flex:0 0 auto;background:none;border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer">Ignora</button></div></div>';
+      const idx=artVerificati.indexOf(nome);
+      const {sheet,input,btnUsa,btnIgnora}=buildSheet(nome);
       document.body.appendChild(sheet);
-      sheet.querySelector('#vi-usa').onclick=()=>{
-        const v=sheet.querySelector('#vi-input').value.trim();
-        if(idx>=0){if(v)artVerificati[idx]=v;else artVerificati.splice(idx,1);}
+      btnUsa.onclick=()=>{
+        const v=input.value.trim();
+        if(idx>=0){artVerificati[idx]=v||nome;}
         document.body.removeChild(sheet);processNext();
       };
-      sheet.querySelector('#vi-ignora').onclick=()=>{
+      btnIgnora.onclick=()=>{
         if(idx>=0)artVerificati.splice(idx,1);
         document.body.removeChild(sheet);processNext();
       };
@@ -1575,4 +1612,4 @@ let toastT;
 function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2600);}
 </script>
 </body>
-</html>
+</htmlsheet.innerHTML='<div class="sheet-inner" style="padding:24px 20px 40px"><div class="label" style="margin-bottom:8px">Intorno non riconosciuto</div><div style="font-size:20px;margin-bottom:16px">'+nome+'</div><div style="font-size:13px;color:var(--text3);margin-bottom:24px">Claude non conosce questo artista. Sostituiscilo o ignoralo.</div><input id="vi-input" class="art-input" style="width:100%;margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:14px;color:var(--text)" placeholder="Sostituisci con..." value="'+nome+'"><div style="display:flex;gap:10px"><button id="vi-usa" class="btn" style="flex:1;padding:12px 0">Usa questo</button><button id="vi-ignora" style="flex:0 0 auto;background:none;border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text3);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer">Ignora</button></div></div>';>
