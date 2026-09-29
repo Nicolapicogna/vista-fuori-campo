@@ -1238,9 +1238,7 @@ async function buildArtistPool(artVerificati, statusEl){
   });
   if(statusEl)statusEl.textContent='Espansione collaboratori…';
   if(artistiConCtx.length>0){
-    const bioText=artistiConCtx.map(({nome,ctx})=>nome+': '+(ctx.bio||'nessuna bio')).join('
-
-');
+    const bioText=artistiConCtx.map(({nome,ctx})=>nome+': '+(ctx.bio||'nessuna bio')).join('\n\n');
     try{
       const collabRes=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:'Da queste biografie musicali, estrai nomi di collaboratori, side projects, progetti paralleli e membri con carriere soliste. Rispondi SOLO con JSON: {"artisti":["nome1","nome2",...]} — massimo 10 nomi, solo artisti reali.\n\n'+bioText}]})});
       const collabData=await collabRes.json();
