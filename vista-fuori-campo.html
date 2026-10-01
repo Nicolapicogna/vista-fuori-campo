@@ -240,6 +240,7 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
 .tac-btn:active{opacity:0.6}
 .tac-riprova{color:var(--text3)}
 .tac-rigenera{color:var(--gold)}
+.track-fonte{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);opacity:0.55;margin-top:3px}
 .art-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-right:2px}
 .art-dot-ok{background:#6a9e7a}
 .art-dot-err{background:#c06060}
@@ -1225,69 +1226,51 @@ async function verificaIntorni(artisti){
 
 async function buildArtistPool(artVerificati, statusEl){
   if(statusEl)statusEl.textContent='Analisi intorni…';
-
-  // Fase 1: recupera contesto Qobuz per ogni intorno in parallelo
   const ctxResults=await Promise.allSettled(artVerificati.map(a=>getArtistContext(a)));
   if(!S.token)return [];
-
   const artistiConCtx=[];
-  const tuttiArtistiNomi=new Set();
-
   ctxResults.forEach((res,i)=>{
-    if(res.status==='fulfilled'&&res.value){
-      const ctx=res.value;
-      artistiConCtx.push({nome:artVerificati[i],ctx,isIntorno:true});
-      ctx.simili.forEach(s=>tuttiArtistiNomi.add(s));
-    }
+    if(res.status==='fulfilled'&&res.value)artistiConCtx.push({nome:artVerificati[i],ctx:res.value});
   });
-
   if(statusEl)statusEl.textContent='Lettura biografie…';
-
-  // Fase 2: Claude legge le bio e estrae collaboratori/side projects/solisti
+  const angoli=['il lato più oscuro e rarefatto','il lato più ritmico e ipnotico','il lato più melodico e sospeso','il lato più sperimentale e di confine','il lato più intimo e documentaristico','il lato più industriale e teso'];
+  const angolo=angoli[Math.floor(Math.random()*angoli.length)];
+  const artistiEspansiMap={};
   if(artistiConCtx.length>0){
     const bioText=artistiConCtx.filter(({ctx})=>ctx.bio).map(({nome,ctx})=>nome+': '+ctx.bio).join('\n\n');
     if(bioText){
       try{
-        const collabRes=await fetch('https://api.anthropic.com/v1/messages',{
-          method:'POST',
-          headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-          body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:'Da queste biografie musicali, estrai nomi di: collaboratori stabili, side projects, progetti paralleli, membri con carriere soliste, produttori ricorrenti, artisti con cui hanno inciso. Escludi gli artisti gia presenti come intorni: '+artVerificati.join(', ')+'. Rispondi SOLO con JSON: {"artisti":["nome1","nome2",...]} — massimo 15 nomi, solo artisti reali.\n\n'+bioText}]})
-        });
+        const collabRes=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:'Da queste biografie musicali, estrai collaboratori, side projects, progetti paralleli, membri con carriere soliste. Angolo tematico da privilegiare: '+angolo+'. Escludi: '+artVerificati.join(', ')+'. Scegli collaboratori meno ovvi e meno citati. Rispondi SOLO con JSON: {"artisti":[{"nome":"...","da":"nome_intorno_di_provenienza"},...]} massimo 15, solo artisti reali.\n\n'+bioText}]})});
         const collabData=await collabRes.json();
         const collabJson=JSON.parse(collabData.content[0].text.trim().replace(/```json|```/g,''));
-        (collabJson.artisti||[]).forEach(a=>tuttiArtistiNomi.add(a));
+        (collabJson.artisti||[]).forEach(a=>{if(a.nome&&a.da)artistiEspansiMap[a.nome]=a.da;});
       }catch(e){}
     }
   }
-
+  artistiConCtx.forEach(({nome,ctx})=>{
+    const similiShuffled=[...ctx.simili].sort(()=>Math.random()-0.5);
+    similiShuffled.slice(0,3).forEach(s=>{if(!artistiEspansiMap[s])artistiEspansiMap[s]=nome;});
+  });
   if(statusEl)statusEl.textContent='Recupero brani affini…';
-
-  // Fase 3: recupera brani per artisti espansi (peso maggiore — 15 brani casuali tra top 30)
-  const artistiEspansi=[...tuttiArtistiNomi].slice(0,12);
-  const espansiCtxResults=await Promise.allSettled(artistiEspansi.map(a=>getArtistContext(a)));
+  const artistiEspansi=Object.keys(artistiEspansiMap);
+  const espansiCtxResults=await Promise.allSettled(artistiEspansi.slice(0,12).map(a=>getArtistContext(a)));
   if(!S.token)return [];
-
   const poolCompleto=[];
-
-  // Artisti espansi — 15 brani casuali tra i top 30 (peso principale)
   espansiCtxResults.forEach((res,i)=>{
     if(res.status==='fulfilled'&&res.value){
       const ctx=res.value;
-      const top30=ctx.topBrani.slice(0,30);
-      // Shuffle e prendi 15
-      const shuffled=top30.sort(()=>Math.random()-0.5).slice(0,15);
-      shuffled.forEach(b=>poolCompleto.push({...b,artista:ctx.nome||artistiEspansi[i],_fonte:'espanso'}));
+      const nomeArtista=artistiEspansi[i];
+      const intornoOrigine=artistiEspansiMap[nomeArtista]||'';
+      const shuffled=[...ctx.topBrani.slice(0,30)].sort(()=>Math.random()-0.5).slice(0,15);
+      shuffled.forEach(b=>poolCompleto.push({...b,artista:ctx.nome||nomeArtista,_fonte:'espanso',_via:intornoOrigine}));
     }
   });
-
-  // Intorni originali — 3 brani meno ovvi (escludi i top 3, prendi tra 4-15)
   artistiConCtx.forEach(({nome,ctx})=>{
-    const menoOvvi=ctx.topBrani.slice(3,20);
-    const shuffled=menoOvvi.sort(()=>Math.random()-0.5).slice(0,3);
-    shuffled.forEach(b=>poolCompleto.push({...b,artista:ctx.nome||nome,_fonte:'intorno'}));
+    const shuffled=[...ctx.topBrani.slice(3,20)].sort(()=>Math.random()-0.5).slice(0,3);
+    shuffled.forEach(b=>poolCompleto.push({...b,artista:ctx.nome||nome,_fonte:'intorno',_via:nome}));
   });
-
-  console.log('POOL SIZE:', poolCompleto.length, '— espansi:', poolCompleto.filter(b=>b._fonte==='espanso').length, '— intorni:', poolCompleto.filter(b=>b._fonte==='intorno').length);
+  console.log('POOL:',poolCompleto.length,'brani | angolo:',angolo);
+  console.log('Espansi:',[...new Set(poolCompleto.filter(b=>b._fonte==='espanso').map(b=>b.artista))]);
   return poolCompleto;
 }
 
@@ -1348,12 +1331,13 @@ CAMPO SONORO DI RIFERIMENTO (intorni originali):
 ${artVerificati.map((a,i)=>`${i+1}. ${a}`).join('\n')}
 
 POOL DI BRANI DISPONIBILI SU QOBUZ (scegli SOLO da questa lista — pool_idx va da 1 al numero totale di brani elencati):
-${(()=>{const rSet=new Set(recentArtisti.map(normalizeArtistName));const rBrani=new Set(recentBrani.map(x=>x.toLowerCase()));return poolBrani.filter(b=>!rSet.has(normalizeArtistName(b.artista))&&!rBrani.has(('"'+b.titolo+'" di '+b.artista).toLowerCase())).slice(0,80).map((b,i)=>`${i+1}. "${b.titolo}" — ${b.artista} (${b.album}, ${b.durata})${b._fonte==='intorno'?' [intorno]':''}`).join('\n');})()}
+${(()=>{const rSet=new Set(recentArtisti.map(normalizeArtistName));const rBrani=new Set(recentBrani.map(x=>x.toLowerCase()));return poolBrani.filter(b=>!rSet.has(normalizeArtistName(b.artista))&&!rBrani.has(('"'+b.titolo+'" di '+b.artista).toLowerCase())).slice(0,80).map((b,i)=>`${i+1}. "${b.titolo}" — ${b.artista} (${b.album}, ${b.durata})${b._fonte==='intorno'?' [intorno: '+b._via+']':b._via?' [via bio '+b._via+']':''}`).join('\n');})()}
 
 REGOLE DI SELEZIONE:
 - Scegli SOLO brani dalla lista pool — non inventare artisti o brani non presenti
-- I brani marcati [intorno] sono degli artisti originali — usali con parsimonia, max 1-2 per playlist
-- Privilegia gli artisti espansi dalle biografie — collaboratori, side projects, solisti
+- I brani [intorno: X] sono degli artisti originali — usali con parsimonia, max 1 per playlist
+- I brani [via bio X] vengono da collaboratori/side projects estratti dalla bio di X — privilegia questi
+- La selezione deve riflettere l'angolo tematico implicito nel pool — non scegliere a caso
 - Ogni brano deve avere artista diverso dagli altri nella playlist
 - Privilegia brani meno ovvi — evita i singoli più famosi
 - Evita artisti con posizioni ideologiche estreme (es. Burzum/Varg Vikernes)
@@ -1367,7 +1351,7 @@ ${fb?'\nFEEDBACK SUI RILIEVI PRECEDENTI:\n'+fb:''}
 SOTTOTITOLO: una frase breve in stile "found narrative" — come se fosse un graffito, un cartello o una scritta trovata lungo il tragitto. Qualcosa di specifico, non generico.
 
 Rispondi SOLO con JSON valido, nessun testo prima o dopo:
-{"titolo":"Vista fuori campo // Rilievo ${num} ${tag}","sottotitolo":"...","descrizione":"...","brani":[{"pos":1,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][0]}","motivazione":"..."},{"pos":2,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":3,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":4,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][2]}","motivazione":"..."},{"pos":5,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][3]}","motivazione":"..."}${S.bonusOn?',{"pos":6,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"Bonus","motivazione":"...","bonus":true}':''}],"durata_totale":"MM:SS"} — pool_idx e il numero (1-based) del brano scelto dalla lista pool; ripeti anche artista/titolo/album/durata dal pool`;
+{"titolo":"Vista fuori campo // Rilievo ${num} ${tag}","sottotitolo":"...","descrizione":"...","brani":[{"pos":1,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][0]}","motivazione":"..."},{"pos":2,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":3,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":4,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][2]}","motivazione":"..."},{"pos":5,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][3]}","motivazione":"..."}${S.bonusOn?',{"pos":6,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"Bonus","motivazione":"...","bonus":true}':''}],"durata_totale":"MM:SS"} — pool_idx e il numero (1-based) del brano scelto dalla lista pool; ripeti artista/titolo/album/durata e includi il campo fonte con il testo dell etichetta [intorno/via] del brano scelto`;
 
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:S.model==='deep'?'claude-sonnet-4-20250514':'claude-haiku-4-5-20251001',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
@@ -1379,7 +1363,7 @@ Rispondi SOLO con JSON valido, nessun testo prima o dopo:
       if(b.pool_idx&&poolFiltrato[b.pool_idx-1]){
         const pb=poolFiltrato[b.pool_idx-1];
         // Pool match — usa dati reali Qobuz, mantieni motivazione e paesaggio
-        return {...b,artista:pb.artista,titolo:pb.titolo,album:pb.album,durata:pb.durata,qobuzId:pb.id};
+        return {...b,artista:pb.artista,titolo:pb.titolo,album:pb.album,durata:pb.durata,qobuzId:pb.id,_fonte:pb._fonte,_via:pb._via};
       }
       // pool_idx non valido — usa artista/titolo che Claude ha incluso come fallback
       // verificaEFissa farà T1/T2/T3 su questi
@@ -1416,6 +1400,7 @@ async function renderResult(pl){
           ${b.pinned?'<span class="track-tag pinned">vincolata</span>':''}
         </div>
         <div class="track-note">${b.motivazione}</div>
+        <div class="track-fonte" id="tf-${b.pos}"></div>
         <div class="track-status" id="qs-${b.pos}">
           <div class="sdot s-wait"></div>Verifica Qobuz…
         </div>
@@ -1443,6 +1428,11 @@ async function renderResult(pl){
     if(b.qobuzId){
       braniGiaUsati.push(b);
       el.innerHTML='<div class="sdot s-ok"></div>Pool — Verificato';
+      const fonteEl=document.getElementById('tf-'+b.pos);
+      if(fonteEl){
+        if(b._fonte==='intorno')fonteEl.textContent='intorno — '+b._via;
+        else if(b._via)fonteEl.textContent='via bio di '+b._via;
+      }
       return;
     }
     try{
