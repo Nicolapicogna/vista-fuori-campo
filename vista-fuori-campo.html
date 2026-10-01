@@ -388,7 +388,7 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
   <div class="page-head">
     <div class="page-head-row">
       <div>
-        <div class="page-kicker">Vista fuori campo <span style="font-size:9px;letter-spacing:0.06em;opacity:0.5;font-family:'DM Sans',sans-serif;vertical-align:middle">v17.1</span></div>
+        <div class="page-kicker">Vista fuori campo <span style="font-size:9px;letter-spacing:0.06em;opacity:0.5;font-family:'DM Sans',sans-serif;vertical-align:middle">v17</span></div>
         <div class="page-title">Rilievo <em id="nextNumTitle">01</em></div>
       </div>
       <div class="page-num-block">
@@ -977,10 +977,10 @@ async function getArtistContext(artistName){
       fetchWithTimeout(`https://vfc-proxy.nicola-picogna.workers.dev/?url=https://www.qobuz.com/api.json/0.2/artist/get?artist_id=${aid}&extra=playlists&limit=5&app_id=${S.appId}`,{headers:{'X-User-Auth-Token':S.token}},15000),
     ]);
     let bio='',topBrani=[],simili=[],playlistInfo='';
-    if(detailRes.status==='fulfilled'){const d=await detailRes.value.json();bio=d.biography&&d.biography.content?d.biography.content.replace(/<[^>]+>/g,'').slice(0,400):'';}
-    if(tracksRes.status==='fulfilled'){const d=await tracksRes.value.json();const items=d.tracks&&d.tracks.items||[];topBrani=items.slice(0,50).map(t=>({id:t.id,titolo:t.title,album:t.album?t.album.title:'',durata:Math.floor(t.duration/60)+':'+(t.duration%60).toString().padStart(2,'0')}));}
-    if(similarRes.status==='fulfilled'){const d=await similarRes.value.json();simili=(d.artists&&d.artists.items||[]).slice(0,5).map(a=>a.name);}
-    if(playlistRes.status==='fulfilled'){const d=await playlistRes.value.json();const pls=d.playlists&&d.playlists.items||[];playlistInfo=pls.slice(0,3).map(p=>p.name).filter(Boolean).join(', ');}
+    if(detailRes.status==='fulfilled'){const d=await detailRes.value.json();if(d.code===401){tokenScaduto();return null;}bio=d.biography&&d.biography.content?d.biography.content.replace(/<[^>]+>/g,'').slice(0,400):'';}
+    if(tracksRes.status==='fulfilled'){const d=await tracksRes.value.json();if(d.code===401){tokenScaduto();return null;}const items=d.tracks&&d.tracks.items||[];topBrani=items.slice(0,50).map(t=>({id:t.id,titolo:t.title,album:t.album?t.album.title:'',durata:Math.floor(t.duration/60)+':'+(t.duration%60).toString().padStart(2,'0')}));}
+    if(similarRes.status==='fulfilled'){const d=await similarRes.value.json();if(d.code===401){tokenScaduto();return null;}simili=(d.artists&&d.artists.items||[]).slice(0,5).map(a=>a.name);}
+    if(playlistRes.status==='fulfilled'){const d=await playlistRes.value.json();if(d.code===401){tokenScaduto();return null;}const pls=d.playlists&&d.playlists.items||[];playlistInfo=pls.slice(0,3).map(p=>p.name).filter(Boolean).join(', ');}
     return {nome:artist.name,bio,topBrani,simili,playlistInfo};
   }catch(e){return null;}
 }
@@ -1225,42 +1225,72 @@ async function verificaIntorni(artisti){
 
 async function buildArtistPool(artVerificati, statusEl){
   if(statusEl)statusEl.textContent='Analisi intorni…';
+
+  // Fase 1: recupera contesto Qobuz per ogni intorno in parallelo
   const ctxResults=await Promise.allSettled(artVerificati.map(a=>getArtistContext(a)));
+  if(!S.token)return [];
+
   const artistiConCtx=[];
   const tuttiArtistiNomi=new Set();
+
   ctxResults.forEach((res,i)=>{
     if(res.status==='fulfilled'&&res.value){
       const ctx=res.value;
-      artistiConCtx.push({nome:artVerificati[i],ctx});
-      tuttiArtistiNomi.add(ctx.nome||artVerificati[i]);
+      artistiConCtx.push({nome:artVerificati[i],ctx,isIntorno:true});
       ctx.simili.forEach(s=>tuttiArtistiNomi.add(s));
     }
   });
-  if(statusEl)statusEl.textContent='Espansione collaboratori…';
+
+  if(statusEl)statusEl.textContent='Lettura biografie…';
+
+  // Fase 2: Claude legge le bio e estrae collaboratori/side projects/solisti
   if(artistiConCtx.length>0){
-    const bioText=artistiConCtx.map(({nome,ctx})=>nome+': '+(ctx.bio||'nessuna bio')).join('\n\n');
-    try{
-      const collabRes=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:'Da queste biografie musicali, estrai nomi di collaboratori, side projects, progetti paralleli e membri con carriere soliste. Rispondi SOLO con JSON: {"artisti":["nome1","nome2",...]} — massimo 10 nomi, solo artisti reali.\n\n'+bioText}]})});
-      const collabData=await collabRes.json();
-      const collabJson=JSON.parse(collabData.content[0].text.trim().replace(/```json|```/g,''));
-      (collabJson.artisti||[]).forEach(a=>tuttiArtistiNomi.add(a));
-    }catch(e){}
+    const bioText=artistiConCtx.filter(({ctx})=>ctx.bio).map(({nome,ctx})=>nome+': '+ctx.bio).join('\n\n');
+    if(bioText){
+      try{
+        const collabRes=await fetch('https://api.anthropic.com/v1/messages',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+          body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:'Da queste biografie musicali, estrai nomi di: collaboratori stabili, side projects, progetti paralleli, membri con carriere soliste, produttori ricorrenti, artisti con cui hanno inciso. Escludi gli artisti gia presenti come intorni: '+artVerificati.join(', ')+'. Rispondi SOLO con JSON: {"artisti":["nome1","nome2",...]} — massimo 15 nomi, solo artisti reali.\n\n'+bioText}]})
+        });
+        const collabData=await collabRes.json();
+        const collabJson=JSON.parse(collabData.content[0].text.trim().replace(/```json|```/g,''));
+        (collabJson.artisti||[]).forEach(a=>tuttiArtistiNomi.add(a));
+      }catch(e){}
+    }
   }
-  if(statusEl)statusEl.textContent='Recupero brani da Qobuz…';
-  const artistiNuovi=[...tuttiArtistiNomi].filter(n=>!artistiConCtx.find(x=>(x.ctx.nome||x.nome)===n));
-  const nuoviCtxResults=await Promise.allSettled(artistiNuovi.slice(0,8).map(a=>getArtistContext(a)));
+
+  if(statusEl)statusEl.textContent='Recupero brani affini…';
+
+  // Fase 3: recupera brani per artisti espansi (peso maggiore — 15 brani casuali tra top 30)
+  const artistiEspansi=[...tuttiArtistiNomi].slice(0,12);
+  const espansiCtxResults=await Promise.allSettled(artistiEspansi.map(a=>getArtistContext(a)));
+  if(!S.token)return [];
+
   const poolCompleto=[];
-  artistiConCtx.forEach(({nome,ctx})=>{
-    ctx.topBrani.slice(0,30).forEach(b=>poolCompleto.push({...b,artista:ctx.nome||nome}));
-  });
-  nuoviCtxResults.forEach((res,i)=>{
+
+  // Artisti espansi — 15 brani casuali tra i top 30 (peso principale)
+  espansiCtxResults.forEach((res,i)=>{
     if(res.status==='fulfilled'&&res.value){
       const ctx=res.value;
-      ctx.topBrani.slice(0,15).forEach(b=>poolCompleto.push({...b,artista:ctx.nome||artistiNuovi[i]}));
+      const top30=ctx.topBrani.slice(0,30);
+      // Shuffle e prendi 15
+      const shuffled=top30.sort(()=>Math.random()-0.5).slice(0,15);
+      shuffled.forEach(b=>poolCompleto.push({...b,artista:ctx.nome||artistiEspansi[i],_fonte:'espanso'}));
     }
   });
+
+  // Intorni originali — 3 brani meno ovvi (escludi i top 3, prendi tra 4-15)
+  artistiConCtx.forEach(({nome,ctx})=>{
+    const menoOvvi=ctx.topBrani.slice(3,20);
+    const shuffled=menoOvvi.sort(()=>Math.random()-0.5).slice(0,3);
+    shuffled.forEach(b=>poolCompleto.push({...b,artista:ctx.nome||nome,_fonte:'intorno'}));
+  });
+
+  console.log('POOL SIZE:', poolCompleto.length, '— espansi:', poolCompleto.filter(b=>b._fonte==='espanso').length, '— intorni:', poolCompleto.filter(b=>b._fonte==='intorno').length);
   return poolCompleto;
 }
+
 
 async function generatePlaylist(){
   const artisti=S.artisti.filter(a=>a.trim());
@@ -1271,10 +1301,13 @@ async function generatePlaylist(){
   document.getElementById('genTxt').textContent='Verifica intorni…';
 
   const artVerificati=await verificaIntorni(artisti);
+  if(!S.token)return;
   if(artVerificati.length<2){toast('Troppi intorni non riconosciuti — controlla i nomi');btn.classList.remove('loading');document.getElementById('genIcon').style.display='';document.getElementById('genTxt').textContent='Genera rilievo';return;}
 
   document.getElementById('genTxt').textContent='Recupero brani da Qobuz…';
   const poolBrani=await buildArtistPool(artVerificati, document.getElementById('genTxt'));
+  // Se il token è scaduto durante buildArtistPool, tokenScaduto() ha già fatto il redirect
+  if(!S.token)return;
   document.getElementById('genTxt').textContent='Generazione…';
   showScreen('s-result');
   document.getElementById('rTitle').textContent='—';
@@ -1315,12 +1348,14 @@ CAMPO SONORO DI RIFERIMENTO (intorni originali):
 ${artVerificati.map((a,i)=>`${i+1}. ${a}`).join('\n')}
 
 POOL DI BRANI DISPONIBILI SU QOBUZ (scegli SOLO da questa lista — pool_idx va da 1 al numero totale di brani elencati):
-${(()=>{const rSet=new Set(recentArtisti.map(normalizeArtistName));const rBrani=new Set(recentBrani.map(x=>x.toLowerCase()));return poolBrani.filter(b=>!rSet.has(normalizeArtistName(b.artista))&&!rBrani.has(('"'+b.titolo+'" di '+b.artista).toLowerCase())).slice(0,60).map((b,i)=>`${i+1}. "${b.titolo}" — ${b.artista} (${b.album}, ${b.durata})`).join('\n');})()}
+${(()=>{const rSet=new Set(recentArtisti.map(normalizeArtistName));const rBrani=new Set(recentBrani.map(x=>x.toLowerCase()));return poolBrani.filter(b=>!rSet.has(normalizeArtistName(b.artista))&&!rBrani.has(('"'+b.titolo+'" di '+b.artista).toLowerCase())).slice(0,80).map((b,i)=>`${i+1}. "${b.titolo}" — ${b.artista} (${b.album}, ${b.durata})${b._fonte==='intorno'?' [intorno]':''}`).join('\n');})()}
 
 REGOLE DI SELEZIONE:
 - Scegli SOLO brani dalla lista pool — non inventare artisti o brani non presenti
+- I brani marcati [intorno] sono degli artisti originali — usali con parsimonia, max 1-2 per playlist
+- Privilegia gli artisti espansi dalle biografie — collaboratori, side projects, solisti
 - Ogni brano deve avere artista diverso dagli altri nella playlist
-- Privilegia brani meno ovvi — evita i singoli più famosi se ci sono alternative interessanti
+- Privilegia brani meno ovvi — evita i singoli più famosi
 - Evita artisti con posizioni ideologiche estreme (es. Burzum/Varg Vikernes)
 Evita brani puramente ambient/drone senza elementi ritmici o tensione — il rilievo deve avere corpo e direzione, non solo atmosfera. Cerca sempre un elemento che muova, che graffi, che pesi.
 Evita brani oltre i 7 minuti salvo eccezioni fortemente motivate dal paesaggio.
@@ -1337,13 +1372,9 @@ Rispondi SOLO con JSON valido, nessun testo prima o dopo:
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:S.model==='deep'?'claude-sonnet-4-20250514':'claude-haiku-4-5-20251001',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
-    const rawJson=data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
-    console.log('RAW JSON:', rawJson.slice(0,500));
-    const pl=JSON.parse(rawJson);
+    const pl=JSON.parse(data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
     const recentSet=new Set(recentArtisti.map(normalizeArtistName));
     const poolFiltrato=poolBrani.filter(b=>!recentSet.has(normalizeArtistName(b.artista)));
-    console.log('POOL SIZE:', poolFiltrato.length);
-    console.log('BRANI pool_idx:', pl.brani.map(b=>b.pool_idx));
     pl.brani=pl.brani.map(b=>{
       if(b.pool_idx&&poolFiltrato[b.pool_idx-1]){
         const pb=poolFiltrato[b.pool_idx-1];
