@@ -187,6 +187,22 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
 .art-del:active{color:var(--text)}
 .add-row{display:flex;align-items:center;gap:8px;padding:12px 0;cursor:pointer;color:var(--text3);font-size:13px;background:transparent;border:none;width:100%;font-family:'DM Sans',sans-serif;transition:color 0.15s}
 .add-row:active{color:var(--text2)}
+.ban-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.ban-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border2);border-radius:14px;padding:5px 6px 5px 11px;font-size:12px;color:var(--text2)}
+.ban-chip button{background:transparent;border:none;color:var(--text3);cursor:pointer;padding:0 4px;font-size:15px;line-height:1;font-family:'DM Sans',sans-serif}
+.ban-chip button:active{color:var(--text)}
+.ban-empty{font-size:12px;color:var(--text3);padding:4px 0 8px}
+.ban-add{display:flex;gap:8px;align-items:center;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:8px 0}
+.ban-add input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px}
+.ban-add input::placeholder{color:var(--text3)}
+.ban-add button{background:transparent;border:none;color:var(--gold);cursor:pointer;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;font-family:'DM Sans',sans-serif}
+.uso-block{margin:0 0 20px;padding:0 0 14px;border-bottom:1px solid var(--border);cursor:pointer}
+.uso-val{font-family:'Playfair Display',serif;font-size:14px;color:var(--text2)}
+.uso-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.uso-det{margin-top:10px;font-size:11px;color:var(--text3);line-height:1.7}
+.uso-det div{display:flex;justify-content:space-between;gap:10px}
+.uso-tot{margin:12px 0 0;font-size:10px;letter-spacing:0.08em;color:var(--text3);display:flex;justify-content:space-between;align-items:center}
+.uso-tot button{background:none;border:none;color:var(--text3);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0}
 
 /* TRACCE */
 .traccia-item{border-bottom:1px solid var(--border);padding:12px 0}
@@ -389,7 +405,7 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
   <div class="page-head">
     <div class="page-head-row">
       <div>
-        <div class="page-kicker">Vista fuori campo <span style="font-size:9px;letter-spacing:0.06em;opacity:0.5;font-family:'DM Sans',sans-serif;vertical-align:middle">v17</span></div>
+        <div class="page-kicker">Vista fuori campo <span style="font-size:9px;letter-spacing:0.06em;opacity:0.5;font-family:'DM Sans',sans-serif;vertical-align:middle">v18</span></div>
         <div class="page-title">Rilievo <em id="nextNumTitle">01</em></div>
       </div>
       <div class="page-num-block">
@@ -554,6 +570,22 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
 
   <div class="divider"></div>
 
+  <!-- BLACKLIST -->
+  <div class="section">
+    <div class="sec-label">
+      <svg width="14" height="14" fill="none" stroke="#b87a7a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>
+      <span class="sec-label-text">Artisti banditi</span>
+      <span class="sec-note">mai nei rilievi</span>
+    </div>
+    <div class="ban-wrap" id="banList"></div>
+    <div class="ban-add">
+      <input id="banInput" placeholder="Artista da bandire" onkeydown="if(event.key==='Enter'){addBan()}">
+      <button onclick="addBan()">aggiungi</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
   <!-- BONUS -->
   <div class="section">
     <div class="toggle-list">
@@ -578,6 +610,7 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
       <svg width="15" height="15" id="genIcon"><use href="#i-generate"/></svg>
       <span id="genTxt">Genera rilievo</span>
     </button>
+    <div class="uso-tot"><span id="usoTotMain">Spesa API stimata · —</span><button onclick="azzeraUso()">azzera</button></div>
   </div>
 </div>
 
@@ -603,6 +636,14 @@ textarea.input{resize:none;line-height:1.65;padding-top:10px}
         <span style="font-size:12px;color:var(--text3)" id="durTarget">—</span>
       </div>
       <div class="dur-bar-bg"><div class="dur-bar" id="durBar"></div></div>
+    </div>
+    <div class="uso-block" onclick="toggleUsoDett()">
+      <div class="dur-row" style="margin-bottom:0">
+        <span class="dur-label">Costo API · tocca per il dettaglio</span>
+        <span class="uso-val" id="usoCosto">—</span>
+      </div>
+      <div class="uso-sub" id="usoSub"></div>
+      <div class="uso-det" id="usoDet" style="display:none"></div>
     </div>
     <div class="result-actions">
       <button class="btn filled" id="saveBtn" onclick="saveToQobuz()">
@@ -666,7 +707,7 @@ const PAES={tratto:['Cime','Piloni','Capannoni','Città'],riflesso:['Città','Ca
 const DUR={treno:{l:'18–24 min',min:18,max:24},auto:{l:'~35 min',min:32,max:38}};
 const BONUS_CTX={tratto:'Strada dalla stazione al lavoro',riflesso:'Arrivo a casa ai piedi del bosco'};
 
-const S={dir:'tratto',mezzo:'treno',energia:'media',artisti:['Nirvana','CCCP Fedeli alla Linea','Nils Frahm','Leftfield'],tracce:[],bonusOn:false,luce:'parz',stagione:'primavera',weatherOn:false,nextNum:1,history:[],currentPl:null,token:null,model:'fast'};
+const S={dir:'tratto',mezzo:'treno',energia:'media',artisti:['Nirvana','CCCP Fedeli alla Linea','Nils Frahm','Leftfield'],tracce:[],blacklist:[],bonusOn:false,luce:'parz',stagione:'primavera',weatherOn:false,nextNum:1,history:[],currentPl:null,token:null,model:'fast'};
 
 function initCtx(){
   const h=new Date().getHours(),m=new Date().getMonth();
@@ -721,7 +762,7 @@ async function doLogin(){
 
     document.getElementById('bottomNav').style.display='flex';
     navTo('s-main','nav-g');
-    initCtx();renderArtisti();renderTracce();renderPaes();
+    initCtx();loadBlacklist();renderArtisti();renderTracce();renderBlacklist();renderPaes();renderUsoMain();
     showScreen('s-main');
     window.scrollTo(0,0);
     toast('Benvenuto su Vista fuori campo');
@@ -836,7 +877,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 
     document.getElementById('bottomNav').style.display='flex';
     navTo('s-main','nav-g');
-    initCtx();renderArtisti();renderTracce();renderPaes();
+    initCtx();loadBlacklist();renderArtisti();renderTracce();renderBlacklist();renderPaes();renderUsoMain();
 
     // Carica playlist con timeout — va avanti anche se fallisce
     try{
@@ -993,7 +1034,7 @@ async function scegliBranoDaLista(contesto,brani,paesaggio,braniGiaUsati){
   const prompt=`Curatore musicale. Scegli il brano piu adatto al paesaggio.\nCONTESTO: ${contesto}\nPAESAGGIO: ${paesaggio}\nESCLUDI: ${usati||'nessuno'}\nLISTA:\n${lista}\nRispondi SOLO col numero (es: 3)`;
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,messages:[{role:'user',content:prompt}]})});
-    const data=await res.json();
+    const data=await res.json();registraUso('T3 scelta','claude-haiku-4-5-20251001',data);
     const idx=parseInt(data.content[0].text.trim())-1;
     if(idx>=0&&idx<brani.length)return brani[idx];
   }catch(e){}
@@ -1054,7 +1095,7 @@ async function riprova(pos){
     el.innerHTML='<div class="sdot s-wait"></div>T2 — alternativa…';
     try{
       const altRes=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:50,messages:[{role:'user',content:'Il brano "'+b.titolo+'" di '+b.artista+' non e disponibile. Suggerisci UN brano reale di '+b.artista+' adatto a: '+b.paesaggio+'. Rispondi SOLO col titolo.'}]})});
-      const altData=await altRes.json();
+      const altData=await altRes.json();registraUso('T2 alternativa','claude-haiku-4-5-20251001',altData);
       const altTitolo=altData.content[0].text.trim().replace(/[^a-zA-Z0-9\s\-',.!?àèéìòù]/g,'');
       match=await cercaSuQobuz(b.artista,altTitolo);
       if(match){b.titolo=altTitolo;b.qobuzId=match.id;updateTrackUI(pos,altTitolo,null,null);el.innerHTML='<div class="sdot s-ok"></div>T2 — Trovato';return;}
@@ -1097,7 +1138,7 @@ async function rigenera(pos){
   const artistiPlaylist=S.currentPl.brani.filter(x=>x.pos!==pos).map(x=>normalizeArtistName(x.artista)).filter(Boolean);
   const recentArtisti=getRecentArtistNames();
   const escludi=[b.titolo,...braniGiaUsati.map(x=>x.titolo)].map(t=>'"'+t+'"').join(', ');
-  const esclusiArtisti=[normalizeArtistName(b.artista),...artistiPlaylist,...recentArtisti];
+  const esclusiArtisti=[normalizeArtistName(b.artista),...artistiPlaylist,...recentArtisti,...S.blacklist.map(normalizeArtistName)];
 
   try{
     let suggestion=null;
@@ -1106,12 +1147,12 @@ async function rigenera(pos){
       const esclusiArtistiTesto=[...new Set(esclusiArtisti)].join(', ');
       const _p1='Sei un curatore musicale. Per il paesaggio "'+b.paesaggio+'" e il campo sonoro degli intorni ['+S.artisti.join(', ')+'], suggerisci UN brano di un artista DIVERSO da quelli gia usati. NON usare nessuno di: '+esclusiArtistiTesto+'. Escludi questi brani: '+escludi+'. Rispondi SOLO con JSON: {"artista":"X","titolo":"Y"}';
       const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:100,messages:[{role:'user',content:_p1}]})});
-      const data=await res.json();
+      const data=await res.json();registraUso('rigenera','claude-haiku-4-5-20251001',data);
       const text=data.content&&data.content.map(x=>x.text||'').join('').trim().replace(/```json|```/g,'');
       if(!text)continue;
       try{suggestion=JSON.parse(text);}catch(e){continue;}
       const candidate=normalizeArtistName(suggestion.artista);
-      if(candidate&&suggestion.titolo&& !esclusiArtisti.includes(candidate)) break;
+      if(candidate&&suggestion.titolo&& !esclusiArtisti.includes(candidate)&&!isBlacklisted(suggestion.artista)) break;
       suggestion=null;
       esclusiArtisti.push(candidate||'risposta non valida');
     }
@@ -1152,7 +1193,7 @@ async function verificaIntorni(artisti){
   S.artistiStatus={};
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:200,messages:[{role:'user',content:'Per ciascuno di questi nomi, dimmi se e un artista musicale reale che conosci. Rispondi SOLO con JSON: {"risultati":[{"nome":"...","noto":true/false},...]}\\n\\nArtisti:\\n'+artisti.map(a=>'- '+a).join('\\n')}]})});
-    const data=await res.json();
+    const data=await res.json();registraUso('verifica intorni','claude-haiku-4-5-20251001',data);
     const json=JSON.parse(data.content[0].text.trim().replace(/```json|```/g,''));
     json.risultati.forEach(r=>{S.artistiStatus[r.nome.trim().toLowerCase()]=r.noto?'ok':'err';});
   }catch(e){
@@ -1236,20 +1277,21 @@ async function buildArtistPool(artVerificati, statusEl){
   const angoli=['il lato più oscuro e rarefatto','il lato più ritmico e ipnotico','il lato più melodico e sospeso','il lato più sperimentale e di confine','il lato più intimo e documentaristico','il lato più industriale e teso'];
   const angolo=angoli[Math.floor(Math.random()*angoli.length)];
   const artistiEspansiMap={};
+  let bioText='';
   if(artistiConCtx.length>0){
-    const bioText=artistiConCtx.filter(({ctx})=>ctx.bio).map(({nome,ctx})=>nome+': '+ctx.bio).join('\n\n');
+    bioText=artistiConCtx.filter(({ctx})=>ctx.bio).map(({nome,ctx})=>nome+': '+ctx.bio).join('\n\n');
     if(bioText){
       try{
-        const collabRes=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:'Da queste biografie musicali, estrai collaboratori, side projects, progetti paralleli, membri con carriere soliste. Angolo tematico da privilegiare: '+angolo+'. Escludi: '+artVerificati.join(', ')+'. Scegli collaboratori meno ovvi e meno citati. Rispondi SOLO con JSON: {"artisti":[{"nome":"...","da":"nome_intorno_di_provenienza"},...]} massimo 15, solo artisti reali.\n\n'+bioText}]})});
-        const collabData=await collabRes.json();
+        const collabRes=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:'Da queste biografie musicali, estrai SOLO nomi di artisti che appaiono letteralmente nel testo — non aggiungere nomi che non sono scritti qui. Cerca: collaboratori, side projects, progetti paralleli, membri con carriere soliste. Angolo tematico: '+angolo+'. Escludi: '+artVerificati.join(', ')+'. Rispondi SOLO con JSON: {"artisti":[{"nome":"...","da":"nome_intorno_di_provenienza"},...]} massimo 15.\n\n'+bioText}]})});
+        const collabData=await collabRes.json();registraUso('bio collaboratori','claude-haiku-4-5-20251001',collabData);
         const collabJson=JSON.parse(collabData.content[0].text.trim().replace(/```json|```/g,''));
-        (collabJson.artisti||[]).forEach(a=>{if(a.nome&&a.da)artistiEspansiMap[a.nome]=a.da;});
+        (collabJson.artisti||[]).forEach(a=>{if(a.nome&&a.da&&!isBlacklisted(a.nome))artistiEspansiMap[a.nome]=a.da;});
       }catch(e){}
     }
   }
   artistiConCtx.forEach(({nome,ctx})=>{
     const similiShuffled=[...ctx.simili].sort(()=>Math.random()-0.5);
-    similiShuffled.slice(0,3).forEach(s=>{if(!artistiEspansiMap[s])artistiEspansiMap[s]=nome;});
+    similiShuffled.filter(s=>!isBlacklisted(s)).slice(0,2).forEach(s=>{if(!artistiEspansiMap[s])artistiEspansiMap[s]=nome;});
   });
   if(statusEl)statusEl.textContent='Recupero brani affini…';
   const artistiEspansi=Object.keys(artistiEspansiMap);
@@ -1261,8 +1303,10 @@ async function buildArtistPool(artVerificati, statusEl){
       const ctx=res.value;
       const nomeArtista=artistiEspansi[i];
       const intornoOrigine=artistiEspansiMap[nomeArtista]||'';
-      const shuffled=[...ctx.topBrani.slice(0,30)].sort(()=>Math.random()-0.5).slice(0,15);
-      shuffled.forEach(b=>poolCompleto.push({...b,artista:ctx.nome||nomeArtista,_fonte:'espanso',_via:intornoOrigine}));
+      const isSimile=!bioText||!bioText.includes(nomeArtista);
+      const nBrani=isSimile?8:15;
+      const shuffled=[...ctx.topBrani.slice(0,30)].sort(()=>Math.random()-0.5).slice(0,nBrani);
+      shuffled.forEach(b=>poolCompleto.push({...b,artista:ctx.nome||nomeArtista,_fonte:isSimile?'simile':'espanso',_via:intornoOrigine}));
     }
   });
   artistiConCtx.forEach(({nome,ctx})=>{
@@ -1270,49 +1314,376 @@ async function buildArtistPool(artVerificati, statusEl){
     shuffled.forEach(b=>poolCompleto.push({...b,artista:ctx.nome||nome,_fonte:'intorno',_via:nome}));
   });
   console.log('POOL:',poolCompleto.length,'brani | angolo:',angolo);
-  console.log('Espansi:',[...new Set(poolCompleto.filter(b=>b._fonte==='espanso').map(b=>b.artista))]);
-  return poolCompleto;
+  console.log('Espansi:',[...new Set(poolCompleto.filter(b=>b._fonte!=='intorno').map(b=>b.artista))]);
+  return diversificaPool(poolCompleto.filter(b=>!isBlacklisted(b.artista)));
 }
 
 
-async function generatePlaylist(){
-  const artisti=S.artisti.filter(a=>a.trim());
-  if(artisti.length<3){toast('Inserisci almeno 3 intorni');return}
-  const btn=document.getElementById('genBtn');
-  btn.classList.add('loading');
-  document.getElementById('genIcon').style.display='none';
-  document.getElementById('genTxt').textContent='Verifica intorni…';
+/* ====================== v18 — GENERAZIONE IN DUE FASI ====================== */
+const MODEL_FAST='claude-haiku-4-5-20251001';
+const MODEL_DEEP='claude-sonnet-4-6';
 
-  const artVerificati=await verificaIntorni(artisti);
-  if(!S.token)return;
-  if(artVerificati.length<2){toast('Troppi intorni non riconosciuti — controlla i nomi');btn.classList.remove('loading');document.getElementById('genIcon').style.display='';document.getElementById('genTxt').textContent='Genera rilievo';return;}
+async function chiamaClaudeJSON(model,prompt,maxTokens,label){
+  const res=await fetchWithTimeout('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model,max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})},90000);
+  const data=await res.json();
+  registraUso(label||'chiamata',model,data);
+  if(data.error)throw new Error(data.error.message||'Errore API');
+  const txt=(data.content||[]).map(b=>b.text||'').join('');
+  const a=txt.indexOf('{'),z=txt.lastIndexOf('}');
+  if(a<0||z<a)throw new Error('JSON assente nella risposta');
+  return JSON.parse(txt.slice(a,z+1));
+}
 
-  document.getElementById('genTxt').textContent='Recupero brani da Qobuz…';
-  const poolBrani=await buildArtistPool(artVerificati, document.getElementById('genTxt'));
-  // Se il token è scaduto durante buildArtistPool, tokenScaduto() ha già fatto il redirect
-  if(!S.token)return;
-  document.getElementById('genTxt').textContent='Generazione…';
-  showScreen('s-result');
-  document.getElementById('rTitle').textContent='—';
-  document.getElementById('rSub').textContent='';
-  document.getElementById('rDesc').textContent='';
-  document.getElementById('tracklist').innerHTML=`
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;gap:16px">
-      <div class="spinner" style="display:block;width:28px;height:28px;border-width:2px"></div>
-      <div style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3)">Generazione in corso…</div>
-    </div>`;
+function setGenStatus(t){
+  const a=document.getElementById('genTxt');if(a)a.textContent=t;
+  const b=document.getElementById('genStatusLbl');if(b)b.textContent=t;
+}
 
-  const num=String(S.nextNum).padStart(2,'0'),tag=S.dir==='tratto'?'[Tratto]':'[Riflesso]';
-  const prog=PAES[S.dir].join(' → '),dur=DUR[S.mezzo];
-  document.getElementById('durTarget').textContent=dur.l;
-  const lMood={sole:'Energico, luminoso, aperto',parz:'Morbido, sospeso, ambivalente',cop:'Introspettivo, denso, rallentato',not:'Acido, industriale, scuro — techno, post-industrial'}[S.luce];
-  const eMood={bassa:'Energia bassa, contemplativo, ritmo contenuto',media:'Equilibrio tra riflessione e movimento',alta:'Ritmo sostenuto, dinamico'}[S.energia];
-  const pinned=S.tracce.filter(t=>t.artista&&t.titolo);
-  const recentBrani=S.history.slice(0,8).flatMap(h=>h.brani||[]).map(b=>`"${b.titolo}" di ${b.artista}`);
-  const recentArtisti=getRecentArtistNames().slice(0,20);
-  const fb=S.history.slice(0,5).map(h=>`#${h.num}: ${h.like===true?'👍':h.like===false?'👎':'—'}${h.note?' ('+h.note+')':''} [${h.brani.map(b=>b.artista+' - '+b.titolo).join(', ')}]`).join('\n');
-  const varDesc=document.getElementById('varDesc').value.trim();
 
+/* ====================== v18 — LOG TOKEN / COSTO ====================== */
+const PREZZI={haiku:[1,5],sonnet:[3,15]}; // $ per milione di token (input, output)
+let USO_RIL={in:0,out:0,usd:0,calls:[]};
+function nuovoUsoRilievo(){
+  USO_RIL={in:0,out:0,usd:0,calls:[]};
+  const t=leggiUsoTot();t.n++;salvaUsoTot(t);
+  aggiornaUsoUI();renderUsoMain();
+}
+function leggiUsoTot(){
+  try{const u=JSON.parse(localStorage.getItem('vfc_uso'));if(u&&typeof u.usd==='number')return u;}catch(e){}
+  return {n:0,in:0,out:0,usd:0,da:new Date().toISOString().slice(0,10)};
+}
+function salvaUsoTot(u){try{localStorage.setItem('vfc_uso',JSON.stringify(u));}catch(e){}}
+function costoUSD(model,i,o){
+  const p=/haiku/i.test(model)?PREZZI.haiku:PREZZI.sonnet;
+  return (i*p[0]+o*p[1])/1e6;
+}
+function registraUso(label,model,data){
+  try{
+    const u=data&&data.usage;if(!u)return;
+    const i=(u.input_tokens||0)+(u.cache_creation_input_tokens||0)+(u.cache_read_input_tokens||0);
+    const o=u.output_tokens||0;
+    const usd=costoUSD(model,i,o);
+    USO_RIL.in+=i;USO_RIL.out+=o;USO_RIL.usd+=usd;
+    USO_RIL.calls.push({label,model:/haiku/i.test(model)?'Haiku':'Sonnet',i,o,usd});
+    const t=leggiUsoTot();t.in+=i;t.out+=o;t.usd+=usd;salvaUsoTot(t);
+    console.log('TOKEN',label,model,i+' in /',o+' out → $'+usd.toFixed(4));
+    aggiornaUsoUI();renderUsoMain();
+  }catch(e){}
+}
+function fmtUSD(x){return '$'+x.toFixed(x<0.1?3:2).replace('.',',');}
+function fmtTok(n){return n>=1000?(n/1000).toFixed(1).replace('.',',')+'k':String(n);}
+function aggiornaUsoUI(){
+  const c=document.getElementById('usoCosto');if(!c)return;
+  c.textContent=USO_RIL.calls.length?fmtUSD(USO_RIL.usd):'—';
+  document.getElementById('usoSub').textContent=USO_RIL.calls.length?`${fmtTok(USO_RIL.in)} in · ${fmtTok(USO_RIL.out)} out · ${USO_RIL.calls.length} chiamate`:'';
+  document.getElementById('usoDet').innerHTML=USO_RIL.calls.map(x=>`<div><span>${x.label} · ${x.model}</span><span>${fmtTok(x.i)} / ${fmtTok(x.o)} · ${fmtUSD(x.usd)}</span></div>`).join('');
+}
+function toggleUsoDett(){const d=document.getElementById('usoDet');d.style.display=d.style.display==='none'?'block':'none';}
+function renderUsoMain(){
+  const el=document.getElementById('usoTotMain');if(!el)return;
+  const t=leggiUsoTot();
+  el.textContent=t.n?`Spesa API stimata · ${t.n} ${t.n===1?'rilievo':'rilievi'} · ${fmtUSD(t.usd)} · ${fmtUSD(t.n?t.usd/t.n:0)} a rilievo`:'Spesa API stimata · —';
+}
+function azzeraUso(){
+  if(!confirm('Azzerare il totale della spesa API stimata?'))return;
+  salvaUsoTot({n:0,in:0,out:0,usd:0,da:new Date().toISOString().slice(0,10)});
+  renderUsoMain();toast('Totale azzerato');
+}
+
+/* ====================== v18 — BLACKLIST ====================== */
+function saveBlacklist(){try{localStorage.setItem('vfc_blacklist',JSON.stringify(S.blacklist));}catch(e){}}
+function loadBlacklist(){
+  try{
+    const b=localStorage.getItem('vfc_blacklist');
+    if(b===null){S.blacklist=['Burzum'];saveBlacklist();return;} // primo avvio: il ban che prima era nel prompt
+    const p=JSON.parse(b);
+    if(Array.isArray(p))S.blacklist=p.filter(x=>typeof x==='string'&&x.trim());
+  }catch(e){}
+}
+function isBlacklisted(name){
+  const n=normalizeArtistName(name||'');
+  if(!n)return false;
+  return S.blacklist.some(x=>{
+    const k=normalizeArtistName(x);
+    if(!k)return false;
+    return n===k||(k.length>=5&&n.includes(k));
+  });
+}
+function escBan(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function renderBlacklist(){
+  const el=document.getElementById('banList');if(!el)return;
+  el.innerHTML=S.blacklist.length
+    ?S.blacklist.map((a,i)=>`<span class="ban-chip">${escBan(a)}<button onclick="delBan(${i})" aria-label="rimuovi">×</button></span>`).join('')
+    :'<div class="ban-empty">Nessun artista bandito</div>';
+}
+function addBan(){
+  const inp=document.getElementById('banInput');
+  const v=inp.value.trim();
+  if(!v)return;
+  if(S.blacklist.some(x=>normalizeArtistName(x)===normalizeArtistName(v))){toast('Già in lista');return}
+  S.blacklist.push(v);saveBlacklist();renderBlacklist();inp.value='';
+  if(S.artisti.some(a=>normalizeArtistName(a)===normalizeArtistName(v)))toast('Attenzione: è anche tra gli intorni');
+}
+function delBan(i){S.blacklist.splice(i,1);saveBlacklist();renderBlacklist();}
+
+/* ---------- Pool ---------- */
+function diversificaPool(pool,maxPerArtista=6){
+  const visti=new Set(),g={};
+  pool.forEach(b=>{
+    if(b.id&&visti.has(b.id))return;
+    if(b.id)visti.add(b.id);
+    const k=normalizeArtistName(b.artista);
+    (g[k]=g[k]||[]).push(b);
+  });
+  return Object.values(g)
+    .flatMap(arr=>[...arr].sort(()=>Math.random()-0.5).slice(0,maxPerArtista))
+    .sort(()=>Math.random()-0.5);
+}
+function etichettaPool(b){
+  if(b._fonte==='intorno')return ' [intorno: '+b._via+']';
+  if(b._fonte==='simile')return ' [simile a '+b._via+']';
+  if(b._via)return ' [via bio '+b._via+']';
+  return '';
+}
+function poolListText(list){
+  return list.map((b,i)=>`${i+1}. "${b.titolo}" — ${b.artista} (${b.album}, ${b.durata})${etichettaPool(b)}`).join('\n');
+}
+
+/* ---------- Durate ---------- */
+function parseDurMin(s){
+  const m=/^(\d+):(\d{2})$/.exec((s||'').trim());
+  return m?(+m[1]+(+m[2])/60):4;
+}
+function minTotali(brani){
+  return brani.filter(b=>!b.bonus).reduce((a,b)=>a+parseDurMin(b.durata),0);
+}
+function fmtDur(min){
+  const s=Math.round(min*60);
+  return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+}
+
+/* ---------- Curva narrativa ---------- */
+// [funzione, tensione 0-10, movimento 0-10]
+const ARCO_BASE={
+  tratto:[['ingresso',2.5,2.5],['orientamento',3,3.5],['deriva',4,4.5],['attrito',6,5.5],['trasformazione',7.5,7],['centro',9,8.5],['apertura',6.5,7],['allontanamento',4.5,5.5],['uscita',2.5,3.5]],
+  riflesso:[['ingresso',7.5,7],['rallentamento',6,6],['ricomposizione',4.5,5],['attrito',5.5,6],['ritorno',4,4.5],['apertura',2.5,3.5],['uscita',1.5,2.5]]
+};
+function stimaNumBrani(dur){
+  return Math.max(5,Math.min(8,Math.round(((dur.min+dur.max)/2)/4.3)));
+}
+// ricampiona la curva su n brani (interpolazione lineare: la curva non viene mai troncata)
+function costruisciArcoVFC(dir,n){
+  const base=ARCO_BASE[dir]||ARCO_BASE.tratto;
+  return Array.from({length:n},(_,i)=>{
+    const t=n===1?0:i/(n-1);
+    const x=t*(base.length-1);
+    const lo=Math.floor(x),hi=Math.min(lo+1,base.length-1),f=x-lo;
+    return {
+      pos:i+1,
+      funzione:base[Math.round(x)][0],
+      tensione:+(base[lo][1]+(base[hi][1]-base[lo][1])*f).toFixed(1),
+      movimento:+(base[lo][2]+(base[hi][2]-base[lo][2])*f).toFixed(1)
+    };
+  });
+}
+
+/* ---------- Contesto condiviso dai prompt ---------- */
+function ctxTestoVFC(c){
+  return `RILIEVO: "Vista fuori campo // Rilievo ${c.num} ${c.tag}" — rilievo sonoro del paesaggio percorribile, ispirato all'estetica fotografica di Richard Misrach: attenzione al dettaglio ordinario, alla bellezza involontaria, alla tensione tra natura e industria.
+Direzione: ${S.dir==='tratto'?'ANDATA (casa → città)':'RITORNO (città → casa)'} — paesaggi in sequenza: ${c.prog}
+Mezzo: ${S.mezzo} — durata TARGET: ${c.dur.min}–${c.dur.max} minuti totali${S.bonusOn?` + bonus track finale (${BONUS_CTX[S.dir]}), ESCLUSA dal conteggio della durata`:''}
+Stagione: ${S.stagione} — Atmosfera luminosa: ${c.lMood} — Energia: ${c.eMood}${c.varDesc?'\nNote del giorno: '+c.varDesc:''}
+
+PAESAGGIO ATTRAVERSATO:
+Prealpi Giulie pedemontane → pianura del nord-est italiano → periferia urbana. Cime innevate, piloni dell'alta tensione arrugginiti, capannoni industriali enormi o in abbandono, lati B delle case, graffiti, ${S.dir==='tratto'?'stazione multiculturale e mercato':'bosco e silenzio pre-alpino'}.
+
+CAMPO SONORO DI RIFERIMENTO (intorni originali):
+${c.artVerificati.map((a,i)=>`${i+1}. ${a}`).join('\n')}`;
+}
+
+/* ---------- FASE A — SELEZIONE ---------- */
+async function selezionaCandidatiVFC(c){
+  const pinnedTxt=c.pinned.length?`\n\nBRANI GIÀ VINCOLATI (verranno aggiunti automaticamente: NON sceglierli e NON scegliere altri brani dei loro artisti):\n${c.pinned.map(t=>`"${t.titolo}" di ${t.artista}`).join('\n')}`:'';
+  const fbTxt=c.fb?'\n\nFEEDBACK SUI RILIEVI PRECEDENTI:\n'+c.fb:'';
+  const prompt=`Sei il selezionatore musicale di "Vista fuori campo".
+
+NON devi ancora costruire la playlist finale. Devi scegliere un gruppo di CANDIDATI che permetta a un secondo curatore di montare una sequenza coerente ma non prevedibile. La playlist non deve semplicemente "suonare come" il paesaggio: deve trasformarsi insieme al paesaggio.
+
+${ctxTestoVFC(c)}
+
+CURVA NARRATIVA DI RIFERIMENTO (tensione e movimento da 0 a 10, ricampionata su ~${c.arco.length} brani):
+${JSON.stringify(c.arco)}${pinnedTxt}${fbTxt}
+
+POOL DI BRANI DISPONIBILI SU QOBUZ (pool_idx va da 1 a ${c.poolList.length}):
+${poolListText(c.poolList)}
+
+REGOLE DI SELEZIONE:
+1. Scegli SOLO brani dalla lista pool. Non inventare artisti o brani.
+2. Non decidere l'ordine definitivo.
+3. Cerca candidati con funzioni diverse: ingresso, continuità, deviazione, tensione, apertura, centro, uscita${S.bonusOn?', e un candidato con funzione "bonus" adatto a: '+BONUS_CTX[S.dir]:''}.
+4. Almeno 2 candidati adatti a ciascun paesaggio della sequenza (${c.prog}).
+5. Ogni artista compare al massimo una volta.
+6. I brani [intorno: X] sono degli artisti originali: al massimo 2 tra tutti i candidati. Privilegia i brani [via bio X] (collaboratori e side project) e [simile a X].
+7. Non scegliere solo brani che assomigliano agli intorni: cerca anche collegamenti indiretti (collaborazioni, side project, affinità documentate).
+8. Privilegia brani meno ovvi, evita i singoli più famosi.
+9. Evita brani puramente ambient/drone senza elementi ritmici o tensione: il rilievo deve avere corpo e direzione, non solo atmosfera. Cerca un elemento che muova, che graffi, che pesi.
+10. Evita brani oltre i 7 minuti salvo eccezioni fortemente motivate.
+11. Preferisci la versione studio originale o remastered: evita live, demo, bootleg, acustiche.
+12. Evita artisti con posizioni ideologiche estreme.
+13. Il tono deve emergere da meteo, stagione ed energia indicati, non da etichette come "cupo" o "malinconico". Resta nell'orbita stilistica degli intorni e nell'angolo implicito nel pool.
+14. Evita che tutti i candidati abbiano lo stesso tono emotivo.
+15. Includi alcuni candidati con funzione di sorpresa. La sorpresa deve essere proporzionale alla solidità della connessione musicale ed essere spiegabile musicalmente:
+   sorpresa 0-3 = continuità evidente; 4-6 = deviazione leggibile; 7-8 = salto significativo ma motivato; 9-10 = solo se il brano crea una nuova direzione necessaria alla sequenza.
+
+Seleziona 11-14 candidati. Per ciascuno: energia, tensione, densita, spazio (0-10), sorpresa (0-10), il paesaggio più adatto, la funzione, e un "motivo" musicale breve (max 15 parole).
+
+Rispondi SOLO con JSON valido:
+{"candidati":[{"pool_idx":12,"funzione":"attrito","paesaggio":"${PAES[S.dir][1]}","energia":7,"tensione":8,"densita":7,"spazio":3,"sorpresa":6,"motivo":"..."}]}`;
+
+  const r=await chiamaClaudeJSON(MODEL_FAST,prompt,3500,'selezione');
+  const visti=new Set(),artisti=new Set(),cand=[];
+  // vincolati: prima di tutti, così nessun altro candidato condivide il loro artista
+  c.pinned.forEach((p,i)=>{
+    const na=normalizeArtistName(p.artista),nt=normalize2(p.titolo);
+    const inPool=c.poolList.findIndex(b=>normalizeArtistName(b.artista)===na&&normalize2(b.titolo)===nt);
+    const base=inPool>=0?c.poolList[inPool]:null;
+    const id=inPool>=0?inPool+1:1001+i;
+    if(visti.has(id)||artisti.has(na))return;
+    visti.add(id);artisti.add(na);
+    cand.push({pool_idx:id,titolo:base?base.titolo:p.titolo,artista:base?base.artista:p.artista,album:base?base.album:'',durata:base?base.durata:'',qobuzId:base?base.id:undefined,_fonte:base?base._fonte:'vincolato',_via:base?base._via:'',funzione:'vincolato',obbligatorio:true,motivo:'brano vincolato dall\'utente'});
+  });
+  (r.candidati||[]).forEach(k=>{
+    const i=Number(k.pool_idx);
+    const pb=c.poolList[i-1];
+    if(!pb||visti.has(i))return;
+    const na=normalizeArtistName(pb.artista);
+    if(artisti.has(na))return;
+    visti.add(i);artisti.add(na);
+    cand.push({pool_idx:i,titolo:pb.titolo,artista:pb.artista,album:pb.album,durata:pb.durata,qobuzId:pb.id,_fonte:pb._fonte,_via:pb._via,funzione:k.funzione||'',paesaggio:k.paesaggio||'',energia:k.energia,tensione:k.tensione,densita:k.densita,spazio:k.spazio,sorpresa:k.sorpresa,motivo:k.motivo||''});
+  });
+  console.log('CANDIDATI',cand.length,cand.map(x=>x.artista+' — '+x.titolo+' ['+x.funzione+', sorpresa '+x.sorpresa+']'));
+  if(cand.length<5)throw new Error('Candidati insufficienti ('+cand.length+')');
+  return cand;
+}
+
+/* ---------- FASE B — MONTAGGIO ---------- */
+function promptMontaggioVFC(c,cand,nota){
+  const nMin=Math.max(4,c.arco.length-1),nMax=c.arco.length+1;
+  const candJson=JSON.stringify(cand.map(x=>({
+    pool_idx:x.pool_idx,titolo:x.titolo,artista:x.artista,durata:x.durata||'~4:00',
+    origine:etichettaPool(x).replace(/^ \[|\]$/g,'')||(x.obbligatorio?'vincolato':''),
+    funzione:x.funzione,paesaggio:x.paesaggio,energia:x.energia,tensione:x.tensione,densita:x.densita,spazio:x.spazio,sorpresa:x.sorpresa,motivo:x.motivo,
+    ...(x.obbligatorio?{obbligatorio:true}:{})
+  })),null,1);
+  return `Sei il montatore finale di "Vista fuori campo".
+
+Hai ricevuto un gruppo di candidati già selezionati. NON puoi aggiungere né inventare brani. Puoi soltanto scegliere, scartare, ordinare, assegnare il paesaggio e la funzione narrativa. Il tuo compito è costruire una SEQUENZA.
+
+${ctxTestoVFC(c)}
+
+Una buona sequenza ha: CONTINUITÀ → DEVIAZIONE → CONSEGUENZA → TRASFORMAZIONE. Non cercare la massima omogeneità. La domanda non è "questo brano è adatto al paesaggio?" ma "perché questo brano deve venire DOPO quello precedente?".
+
+CURVA DEL RILIEVO (guida, non gabbia; tensione e movimento 0-10):
+${JSON.stringify(c.arco)}
+
+CANDIDATI (pool_idx = identificativo):
+${candJson}
+
+REGOLE DI MONTAGGIO:
+1. Ogni artista compare una sola volta.
+2. La progressione dei paesaggi ${c.prog} è INVIOLABILE: un paesaggio può avere più brani, ma non si torna mai indietro. Il campo "paesaggio" deve essere uno tra: ${PAES[S.dir].join(', ')}.
+3. Durata: la somma dei brani (bonus esclusa) deve stare tra ${c.dur.min} e ${c.dur.max} minuti. Di norma servono ${nMin}-${nMax} brani: usa quanti ne servono per RIEMPIRE il tempo, senza lasciare silenzio.
+4. I candidati con "obbligatorio": true DEVONO essere inclusi.
+5. Non usare due brani consecutivi con la stessa funzione narrativa né troppo simili.
+6. Evita salti gratuiti di energia, ma non rendere la curva perfettamente liscia: servono almeno 1-2 cambi di direzione percepibili.
+7. Il brano più intenso NON è automaticamente l'ultimo; il più bello NON è automaticamente il centro.
+8. Inserisci almeno una deviazione significativa se i candidati lo consentono, e dai-le una conseguenza: il brano successivo deve far capire perché era necessaria.
+9. L'ultimo brano deve lasciare una trasformazione, non solo "chiudere bene".
+10. Considera energia, densità, spazio, tensione, timbro implicito e funzione.
+11. Test della transizione, per ogni coppia: "se tolgo il primo brano, il secondo perde parte del suo significato?" Se no, cerca una sequenza migliore.${S.bonusOn?`\n12. BONUS TRACK: aggiungi in fondo UN brano dei candidati non usati, adatto a "${BONUS_CTX[S.dir]}", con "bonus":true e paesaggio "Bonus". Non conta nella durata.`:''}
+
+SOTTOTITOLO: una frase breve in stile "found narrative", come un graffito, un cartello o una scritta trovata lungo il tragitto. Specifico, non generico.
+DESCRIZIONE: 1-2 frasi sul disegno complessivo del rilievo.
+MOTIVAZIONE di ogni brano: una frase (max 25 parole) che dice perché sta lì, in relazione al precedente.${nota?'\n\nCORREZIONE RICHIESTA (la tua sequenza precedente aveva un problema): '+nota:''}
+
+Rispondi SOLO con JSON valido:
+{"sottotitolo":"...","descrizione":"...","brani":[{"pos":1,"pool_idx":12,"paesaggio":"${PAES[S.dir][0]}","funzione":"ingresso","motivazione":"..."}],"arco":"una frase sull'arco complessivo","transizioni":["..."]}`;
+}
+
+function assemblaMontaggioVFC(r,c,cand){
+  const byId=new Map(cand.map(x=>[x.pool_idx,x]));
+  const lista=PAES[S.dir];
+  let prev=0,haBonus=false;
+  const usati=new Set(),artisti=new Set(),brani=[];
+  (r.brani||[]).forEach(b=>{
+    const k=byId.get(Number(b.pool_idx));
+    if(!k||usati.has(k.pool_idx))return;
+    const na=normalizeArtistName(k.artista);
+    if(artisti.has(na))return;
+    usati.add(k.pool_idx);artisti.add(na);
+    const bonus=S.bonusOn&&!!b.bonus&&!haBonus;
+    if(bonus)haBonus=true;
+    let paes='Bonus';
+    if(!bonus){
+      let i=lista.indexOf(b.paesaggio);
+      if(i<0||i<prev)i=prev; // progressione monotona garantita dal codice
+      prev=i;paes=lista[i];
+    }
+    brani.push({pos:0,pool_idx:k.pool_idx,artista:k.artista,titolo:k.titolo,album:k.album||'',durata:k.durata||'',paesaggio:paes,funzione:b.funzione||k.funzione||'',motivazione:b.motivazione||k.motivo||'',qobuzId:k.qobuzId,_fonte:k._fonte,_via:k._via,bonus,pinned:!!k.obbligatorio});
+  });
+  if(brani.length<3)throw new Error('Montaggio con meno di 3 brani validi');
+  // la bonus track sta sempre in fondo
+  const ordinati=[...brani.filter(b=>!b.bonus),...brani.filter(b=>b.bonus)];
+  return {sottotitolo:r.sottotitolo||'',descrizione:r.descrizione||'',arco:r.arco||'',transizioni:Array.isArray(r.transizioni)?r.transizioni:[],brani:ordinati};
+}
+
+function problemiMontaggioVFC(pl,c,cand){
+  const p=[];
+  const mancanti=cand.filter(x=>x.obbligatorio&&!pl.brani.some(b=>b.pool_idx===x.pool_idx));
+  if(mancanti.length)p.push('Mancano i brani obbligatori: '+mancanti.map(x=>`"${x.titolo}" (pool_idx ${x.pool_idx})`).join(', ')+'.');
+  const tot=minTotali(pl.brani);
+  if(tot<c.dur.min-1)p.push(`La durata totale (bonus esclusa) è ${tot.toFixed(1)} min, sotto il target ${c.dur.min}–${c.dur.max}: usa più brani o brani più lunghi.`);
+  else if(tot>c.dur.max+2)p.push(`La durata totale (bonus esclusa) è ${tot.toFixed(1)} min, sopra il target ${c.dur.min}–${c.dur.max}: usa meno brani o brani più corti.`);
+  return p.join(' ');
+}
+
+async function montaRilievoVFC(c,cand){
+  const model=S.model==='deep'?MODEL_DEEP:MODEL_FAST;
+  let r=await chiamaClaudeJSON(model,promptMontaggioVFC(c,cand,''),2500,'montaggio');
+  let pl=assemblaMontaggioVFC(r,c,cand);
+  let prob=problemiMontaggioVFC(pl,c,cand);
+  if(prob){
+    console.log('MONTAGGIO: ritento una volta —',prob);
+    try{
+      const r2=await chiamaClaudeJSON(model,promptMontaggioVFC(c,cand,prob),2500,'montaggio (correzione)');
+      const pl2=assemblaMontaggioVFC(r2,c,cand);
+      if(problemiMontaggioVFC(pl2,c,cand).length<=prob.length)pl=pl2;
+    }catch(e){console.log('Secondo montaggio fallito, tengo il primo',e);}
+  }
+  // rete di sicurezza: i brani vincolati mancanti entrano comunque, prima dell'ultimo brano non-bonus
+  cand.filter(x=>x.obbligatorio&&!pl.brani.some(b=>b.pool_idx===x.pool_idx)).forEach(k=>{
+    const nonBonus=pl.brani.filter(b=>!b.bonus).length;
+    const ultimo=pl.brani.filter(b=>!b.bonus)[nonBonus-1];
+    pl.brani.splice(Math.max(nonBonus-1,0),0,{pos:0,pool_idx:k.pool_idx,artista:k.artista,titolo:k.titolo,album:k.album||'',durata:k.durata||'',paesaggio:ultimo?ultimo.paesaggio:PAES[S.dir][0],funzione:'vincolato',motivazione:k.motivo,qobuzId:k.qobuzId,_fonte:k._fonte,_via:k._via,bonus:false,pinned:true});
+  });
+  pl.brani.forEach((b,i)=>{b.pos=i+1;});
+  pl.titolo=`Vista fuori campo // Rilievo ${c.num} ${c.tag}`;
+  pl.durata_totale=fmtDur(minTotali(pl.brani));
+  console.log('ARCO:',pl.arco,'\nTRANSIZIONI:',pl.transizioni);
+  return pl;
+}
+
+async function generaV18(c){
+  c.arco=costruisciArcoVFC(S.dir,stimaNumBrani(c.dur));
+  setGenStatus('Selezione candidati…');
+  const cand=await selezionaCandidatiVFC(c);
+  setGenStatus('Montaggio del rilievo…');
+  return await montaRilievoVFC(c,cand);
+}
+
+/* ---------- Fallback: la vecchia chiamata unica (v17), con indici corretti ---------- */
+async function generaLegacyVFC(c){
+  const {num,tag,prog,dur,lMood,eMood,pinned,recentBrani,recentArtisti,fb,varDesc,artVerificati,poolList}=c;
   const prompt=`Sei un curatore musicale con sensibilità documentaristica. Il progetto "Vista fuori campo" è un rilievo sonoro del paesaggio percorribile, ispirato all'estetica fotografica di Richard Misrach: attenzione al dettaglio ordinario, alla bellezza involontaria, alla tensione tra natura e industria.
 
 RILIEVO: "Vista fuori campo // Rilievo ${num} ${tag}"
@@ -1331,7 +1702,7 @@ CAMPO SONORO DI RIFERIMENTO (intorni originali):
 ${artVerificati.map((a,i)=>`${i+1}. ${a}`).join('\n')}
 
 POOL DI BRANI DISPONIBILI SU QOBUZ (scegli SOLO da questa lista — pool_idx va da 1 al numero totale di brani elencati):
-${(()=>{const rSet=new Set(recentArtisti.map(normalizeArtistName));const rBrani=new Set(recentBrani.map(x=>x.toLowerCase()));return poolBrani.filter(b=>!rSet.has(normalizeArtistName(b.artista))&&!rBrani.has(('"'+b.titolo+'" di '+b.artista).toLowerCase())).slice(0,80).map((b,i)=>`${i+1}. "${b.titolo}" — ${b.artista} (${b.album}, ${b.durata})${b._fonte==='intorno'?' [intorno: '+b._via+']':b._via?' [via bio '+b._via+']':''}`).join('\n');})()}
+${poolListText(poolList)}
 
 REGOLE DI SELEZIONE:
 - Scegli SOLO brani dalla lista pool — non inventare artisti o brani non presenti
@@ -1340,7 +1711,7 @@ REGOLE DI SELEZIONE:
 - La selezione deve riflettere l'angolo tematico implicito nel pool — non scegliere a caso
 - Ogni brano deve avere artista diverso dagli altri nella playlist
 - Privilegia brani meno ovvi — evita i singoli più famosi
-- Evita artisti con posizioni ideologiche estreme (es. Burzum/Varg Vikernes)
+- Evita artisti con posizioni ideologiche estreme
 Evita brani puramente ambient/drone senza elementi ritmici o tensione — il rilievo deve avere corpo e direzione, non solo atmosfera. Cerca sempre un elemento che muova, che graffi, che pesi.
 Evita brani oltre i 7 minuti salvo eccezioni fortemente motivate dal paesaggio.
 Preferisci sempre la versione studio originale o remastered — evita versioni live, demo, bootleg, acustiche o registrazioni di qualità inferiore. Se un brano esiste in più versioni, scegli quella di studio o remastered.
@@ -1353,31 +1724,81 @@ SOTTOTITOLO: una frase breve in stile "found narrative" — come se fosse un gra
 Rispondi SOLO con JSON valido, nessun testo prima o dopo:
 {"titolo":"Vista fuori campo // Rilievo ${num} ${tag}","sottotitolo":"...","descrizione":"...","brani":[{"pos":1,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][0]}","motivazione":"..."},{"pos":2,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":3,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][1]}","motivazione":"..."},{"pos":4,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][2]}","motivazione":"..."},{"pos":5,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"${PAES[S.dir][3]}","motivazione":"..."}${S.bonusOn?',{"pos":6,"pool_idx":N,"artista":"...","titolo":"...","album":"...","durata":"M:SS","paesaggio":"Bonus","motivazione":"...","bonus":true}':''}],"durata_totale":"MM:SS"} — pool_idx e il numero (1-based) del brano scelto dalla lista pool; ripeti artista/titolo/album/durata e includi il campo fonte con il testo dell etichetta [intorno/via] del brano scelto`;
 
+  const pl=await chiamaClaudeJSON(S.model==='deep'?MODEL_DEEP:MODEL_FAST,prompt,2500,'modo semplice');
+  pl.brani=(pl.brani||[]).map(b=>{
+    const pb=b.pool_idx&&poolList[b.pool_idx-1];
+    if(pb)return {...b,artista:pb.artista,titolo:pb.titolo,album:pb.album,durata:pb.durata,qobuzId:pb.id,_fonte:pb._fonte,_via:pb._via};
+    return b; // pool_idx non valido: T1/T2/T3 su artista/titolo di Claude
+  }).filter(b=>b.artista&&b.titolo&&(!isBlacklisted(b.artista)||pinned.some(p=>normalizeArtistName(p.artista)===normalizeArtistName(b.artista))));
+  const seen=new Set();
+  pl.brani=pl.brani.filter(b=>{const n=normalizeArtistName(b.artista);if(seen.has(n))return false;seen.add(n);return true;});
+  pl.brani.forEach((b,i)=>{b.pos=i+1;b.pinned=pinned.some(p=>b.titolo&&p.titolo&&b.titolo.toLowerCase().includes(p.titolo.toLowerCase()));});
+  if(pl.brani.length<3)throw new Error('Troppi pochi brani');
+  pl.titolo=`Vista fuori campo // Rilievo ${num} ${tag}`;
+  pl.durata_totale=fmtDur(minTotali(pl.brani));
+  return pl;
+}
+
+
+/* ---------- Orchestratore ---------- */
+async function generatePlaylist(){
+  const artisti=S.artisti.filter(a=>a.trim());
+  if(artisti.length<3){toast('Inserisci almeno 3 intorni');return}
+  const btn=document.getElementById('genBtn');
+  btn.classList.add('loading');
+  document.getElementById('genIcon').style.display='none';
+  document.getElementById('genTxt').textContent='Verifica intorni…';
+
+  nuovoUsoRilievo();
+  const artVerificati=await verificaIntorni(artisti);
+  if(!S.token)return;
+  if(artVerificati.length<2){toast('Troppi intorni non riconosciuti — controlla i nomi');btn.classList.remove('loading');document.getElementById('genIcon').style.display='';document.getElementById('genTxt').textContent='Genera rilievo';return;}
+
+  document.getElementById('genTxt').textContent='Recupero brani da Qobuz…';
+  const poolBrani=await buildArtistPool(artVerificati, document.getElementById('genTxt'));
+  // Se il token è scaduto durante buildArtistPool, tokenScaduto() ha già fatto il redirect
+  if(!S.token)return;
+  document.getElementById('genTxt').textContent='Generazione…';
+  showScreen('s-result');
+  document.getElementById('rTitle').textContent='—';
+  document.getElementById('rSub').textContent='';
+  document.getElementById('rDesc').textContent='';
+  document.getElementById('tracklist').innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;gap:16px">
+      <div class="spinner" style="display:block;width:28px;height:28px;border-width:2px"></div>
+      <div id="genStatusLbl" style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3)">Generazione in corso…</div>
+    </div>`;
+
+  const num=String(S.nextNum).padStart(2,'0'),tag=S.dir==='tratto'?'[Tratto]':'[Riflesso]';
+  const prog=PAES[S.dir].join(' → '),dur=DUR[S.mezzo];
+  document.getElementById('durTarget').textContent=dur.l;
+  const lMood={sole:'Energico, luminoso, aperto',parz:'Morbido, sospeso, ambivalente',cop:'Introspettivo, denso, rallentato',not:'Acido, industriale, scuro — techno, post-industrial'}[S.luce];
+  const eMood={bassa:'Energia bassa, contemplativo, ritmo contenuto',media:'Equilibrio tra riflessione e movimento',alta:'Ritmo sostenuto, dinamico'}[S.energia];
+  const pinned=S.tracce.filter(t=>t.artista&&t.titolo);
+  const recentBrani=S.history.slice(0,8).flatMap(h=>h.brani||[]).map(b=>`"${b.titolo}" di ${b.artista}`);
+  const recentArtisti=getRecentArtistNames().slice(0,20);
+  const fb=S.history.slice(0,5).map(h=>`#${h.num}: ${h.like===true?'👍':h.like===false?'👎':'—'}${h.note?' ('+h.note+')':''} [${h.brani.map(b=>b.artista+' - '+b.titolo).join(', ')}]`).join('\n');
+  const varDesc=document.getElementById('varDesc').value.trim();
+
+  // Lista pool costruita UNA volta: gli indici del prompt e quelli del parsing coincidono sempre
+  const rSet=new Set(recentArtisti.map(normalizeArtistName));
+  const rBrani=new Set(recentBrani.map(x=>x.toLowerCase()));
+  const poolList=poolBrani.filter(b=>!isBlacklisted(b.artista)&&!rSet.has(normalizeArtistName(b.artista))&&!rBrani.has(('"'+b.titolo+'" di '+b.artista).toLowerCase())).slice(0,90);
+  console.log('POOL SIZE',poolBrani.length,'→ lista prompt',poolList.length);
+
+  const c={num,tag,prog,dur,lMood,eMood,pinned,recentBrani,recentArtisti,fb,varDesc,artVerificati,poolList};
+
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:S.model==='deep'?'claude-sonnet-4-20250514':'claude-haiku-4-5-20251001',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
-    const data=await res.json();
-    const pl=JSON.parse(data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
-    const recentSet=new Set(recentArtisti.map(normalizeArtistName));
-    const poolFiltrato=poolBrani.filter(b=>!recentSet.has(normalizeArtistName(b.artista)));
-    pl.brani=pl.brani.map(b=>{
-      if(b.pool_idx&&poolFiltrato[b.pool_idx-1]){
-        const pb=poolFiltrato[b.pool_idx-1];
-        // Pool match — usa dati reali Qobuz, mantieni motivazione e paesaggio
-        return {...b,artista:pb.artista,titolo:pb.titolo,album:pb.album,durata:pb.durata,qobuzId:pb.id,_fonte:pb._fonte,_via:pb._via};
-      }
-      // pool_idx non valido — usa artista/titolo che Claude ha incluso come fallback
-      // verificaEFissa farà T1/T2/T3 su questi
-      return b;
-    }).filter(b=>b.artista&&b.titolo); // scarta solo brani senza dati minimi
-    const artistiNelRilievo=pl.brani.map(b=>normalizeArtistName(b.artista)).filter(Boolean);
-    const duplicati=artistiNelRilievo.filter((a,i)=>artistiNelRilievo.indexOf(a)!==i);
-    if(duplicati.length){
-      const seen=new Set();
-      pl.brani=pl.brani.filter(b=>{const n=normalizeArtistName(b.artista);if(seen.has(n))return false;seen.add(n);return true;});
+    let pl;
+    try{
+      pl=await generaV18(c);
+    }catch(e){
+      console.warn('v18 fallita, uso la chiamata unica:',e);
+      setGenStatus('Generazione (modo semplice)…');
+      pl=await generaLegacyVFC(c);
     }
-    pl.brani.forEach(b=>{b.pinned=pinned.some(p=>b.titolo&&p.titolo&&b.titolo.toLowerCase().includes(p.titolo.toLowerCase()));});
     S.currentPl=pl;renderResult(pl);
-  }catch(e){toast('Errore — riprova');showScreen('s-main');}
+  }catch(e){console.warn(e);toast('Errore — riprova');showScreen('s-main');}
   btn.classList.remove('loading');
   document.getElementById('genIcon').style.display='';
   document.getElementById('genTxt').textContent='Genera rilievo';
@@ -1397,6 +1818,7 @@ async function renderResult(pl){
         <div class="track-album">${b.album}</div>
         <div class="track-tags">
           <span class="track-tag">${b.paesaggio}</span>
+          ${b.funzione?`<span class="track-tag">${b.funzione}</span>`:''}
           ${b.pinned?'<span class="track-tag pinned">vincolata</span>':''}
         </div>
         <div class="track-note">${b.motivazione}</div>
@@ -1416,6 +1838,7 @@ async function renderResult(pl){
         </div>
       </div>
     </div>`).join('');
+  aggiornaUsoUI();
   const tot=pl.durata_totale||'—';
   document.getElementById('durTot').textContent=tot;
   const mins=tot.split(':').map(Number).reduce((a,v,i)=>i===0?v:a+v/60,0);
@@ -1431,6 +1854,7 @@ async function renderResult(pl){
       const fonteEl=document.getElementById('tf-'+b.pos);
       if(fonteEl){
         if(b._fonte==='intorno')fonteEl.textContent='intorno — '+b._via;
+        else if(b._fonte==='simile')fonteEl.textContent='simile a '+b._via;
         else if(b._via)fonteEl.textContent='via bio di '+b._via;
       }
       return;
@@ -1445,7 +1869,7 @@ async function renderResult(pl){
       el.innerHTML='<div class="sdot s-wait"></div>T2 — alternativa…';
       try{
         const altRes=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:50,messages:[{role:'user',content:'Il brano "'+b.titolo+'" di '+b.artista+' non e disponibile. Suggerisci UN brano reale di '+b.artista+' adatto a: '+b.paesaggio+'. Rispondi SOLO col titolo.'}]})});
-        const altData=await altRes.json();
+        const altData=await altRes.json();registraUso('T2 alternativa','claude-haiku-4-5-20251001',altData);
         const altTitolo=altData.content[0].text.trim().replace(/[^a-zA-Z0-9\s\-',.!?àèéìòù]/g,'');
         match=await cercaSuQobuz(b.artista,altTitolo);
         if(match){b.titolo=altTitolo;b.qobuzId=match.id;braniGiaUsati.push(b);updateTrackUI(b.pos,altTitolo,null,null);el.innerHTML='<div class="sdot s-ok"></div>T2 — Trovato';return;}
